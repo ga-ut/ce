@@ -1,0 +1,22 @@
+{
+  "devDependencies": {
+    "esbuild": "^0.23.0"
+  },
+  "name": "ga-ut-blog",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "esbuild App.ts --bundle --outfile=ce.js",
+    "dev": "npx http-server ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ga-ut/ga-ut-blog.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ga-ut/ga-ut-blog/issues"
+  },
+  "homepage": "https://github.com/ga-ut/ga-ut-blog#readme",
+  "description": ""
+}
