@@ -5,7 +5,7 @@
   "name": "ga-ut-blog",
   "version": "1.0.0",
   "scripts": {
-    "build": "esbuild App.ts --bundle --outfile=ce.js",
+    "build": "esbuild index.ts --bundle --outfile=ce.js",
     "dev": "npx http-server ."
   },
   "repository": {

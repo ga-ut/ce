@@ -5,27 +5,29 @@ export type CEInstance<T> = {
 };
 
 export class CE {
+  static entryPoint: string;
+  static setEntryPoint = (entryPoint: string) => {
+    this.entryPoint = entryPoint;
+    const root = document.createElement(entryPoint);
+    document.body.append(root);
+  };
   static define<T>(params: {
     name: string;
     state: T;
-    connectedCallback?: () => void;
-    disconnectedCallback?: () => void;
-    adoptedCallback?: () => void;
-    attributeChangedCallback?: (
-      name: string,
-      oldValue: any,
-      newValue: any
-    ) => void;
+    onConnect?: () => void;
+    onDisconnect?: () => void;
+    onAdopt?: () => void;
+    onAttributeChange?: (name: string, oldValue: any, newValue: any) => void;
     render: (this: CEInstance<T>) => string;
     [key: string]: any;
   }) {
     const {
       name,
       state,
-      connectedCallback = () => {},
-      disconnectedCallback = () => {},
-      adoptedCallback = () => {},
-      attributeChangedCallback = () => {},
+      onConnect = () => {},
+      onDisconnect = () => {},
+      onAdopt = () => {},
+      onAttributeChange = () => {},
       render,
       ...rest
     } = params;
@@ -46,19 +48,19 @@ export class CE {
 
         connectedCallback() {
           this.render();
-          connectedCallback.call(this);
+          onConnect.call(this);
         }
 
         disconnectedCallback() {
-          disconnectedCallback.call(this);
+          onDisconnect.call(this);
         }
 
         adoptedCallback() {
-          adoptedCallback.call(this);
+          onAdopt.call(this);
         }
 
         attributeChangedCallback(name: string, oldValue: any, newValue: any) {
-          attributeChangedCallback.call(this, name, oldValue, newValue);
+          onAttributeChange.call(this, name, oldValue, newValue);
         }
 
         bind(key: keyof T) {
@@ -98,9 +100,9 @@ export class CE {
 
         private notify(changedAttributes: (keyof T)[]) {
           for (const key of changedAttributes) {
-            const elements = this.shadowRoot?.querySelectorAll(
-              `[${String(key)}]`
-            );
+            const root = document.querySelector(CE.entryPoint).shadowRoot;
+
+            const elements = root?.querySelectorAll(`[${String(key)}]`);
 
             elements.forEach((element) => {
               const newValue = this._state[key];
