@@ -1,7 +1,7 @@
-type CustomElementInstance<T> = {
+export type CEInstance<T> = {
   state: T;
   setState: (newState: Partial<T>) => void;
-  getBindState: (key: keyof T) => { key: string; content: T };
+  bind: (key: keyof T) => { key: string; content: T };
 };
 
 export class CE {
@@ -16,7 +16,7 @@ export class CE {
       oldValue: any,
       newValue: any
     ) => void;
-    render: (this: CustomElementInstance<T>) => string;
+    render: (this: CEInstance<T>) => string;
     [key: string]: any;
   }) {
     const {
@@ -61,7 +61,7 @@ export class CE {
           attributeChangedCallback.call(this, name, oldValue, newValue);
         }
 
-        getBindState(key: keyof T) {
+        bind(key: keyof T) {
           return {
             key,
             content: this._state[key],
