@@ -1,33 +1,51 @@
-import { CE, html, type CEInstance } from "@/ce";
+import { CE, html } from "@/ce";
 
-interface MainAppState {
-  count: number;
-}
-
-const globalState = {
+const countState = {
   count: 0,
+};
+
+const userState = {
+  users: ["test1", "test2", "test3"],
 };
 
 CE.define({
   name: "counter-button-group",
-  state: globalState,
+  state: countState,
   render() {
-    return html`<button add="click">+</button>
-      <button minus="click">-</button>`;
+    return html` <div>
+      <button add="click">+</button> <button minus="click">-</button>
+    </div>`;
   },
-  add(this: CEInstance<MainAppState>) {
-    this.setState({ count: this.state.count + 1 });
-  },
-  minus(this: CEInstance<MainAppState>) {
-    this.setState({ count: this.state.count - 1 });
+  handlers: {
+    add() {
+      this.setState({ count: this.state.count + 1 });
+    },
+    minus(this) {
+      this.setState({ count: this.state.count - 1 });
+    },
   },
 });
 
-CE.define<MainAppState>({
-  name: "main-app",
-  state: globalState,
+CE.define({
+  name: "user-info",
+  state: userState,
   render() {
-    return html` <div>Count: ${this.bind("count")}</div>
-      <counter-button-group></counter-button-group>`;
+    return html`<div>
+      ${userState.users.reduce((result, user) => {
+        return result + html` <div>${user}</div> `;
+      }, "")}
+    </div>`;
+  },
+});
+
+CE.define({
+  name: "main-app",
+  state: countState,
+  render() {
+    return html`
+      <div>Count: ${this.bind("count")}</div>
+      <counter-button-group test="1"></counter-button-group>
+      <user-info></user-info>
+    `;
   },
 });

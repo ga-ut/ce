@@ -1,25 +1,42 @@
-export type CEInstance<T> = {
+type CEInstance<T, K> = {
   state: T;
   setState: (newState: Partial<T>) => void;
-  bind: (key: keyof T) => { key: string; content: T };
-};
+  bind: (key: keyof T) => {
+    key: string;
+    content: T;
+    state: { [key: string]: T };
+  };
+  handlers?: K;
+} & HTMLElement;
 
 export class CE {
   static entryPoint: string;
+
   static setEntryPoint = (entryPoint: string) => {
     this.entryPoint = entryPoint;
     const root = document.createElement(entryPoint);
     document.body.append(root);
   };
-  static define<T>(params: {
+
+  static listeners = new Map();
+
+  static define<
+    T,
+    K extends { [key: string]: (this: CEInstance<T, K>) => void }
+  >(params: {
     name: string;
     state: T;
     onConnect?: () => void;
     onDisconnect?: () => void;
     onAdopt?: () => void;
-    onAttributeChange?: (name: string, oldValue: any, newValue: any) => void;
-    render: (this: CEInstance<T>) => string;
-    [key: string]: any;
+    onAttributeChange?: (
+      this: CEInstance<T, K>,
+      name: string,
+      oldValue: any,
+      newValue: any
+    ) => void;
+    render: (this: CEInstance<T, K>) => string;
+    handlers?: K;
   }) {
     const {
       name,
@@ -29,16 +46,12 @@ export class CE {
       onAdopt = () => {},
       onAttributeChange = () => {},
       render,
-      ...rest
+      handlers,
     } = params;
-
-    const observedAttributes = Object.keys(state) as Array<keyof T>;
 
     customElements.define(
       name,
       class extends HTMLElement {
-        static observedAttributes = observedAttributes;
-
         private _state: T = state;
 
         constructor() {
@@ -64,27 +77,30 @@ export class CE {
         }
 
         bind(key: keyof T) {
+          const attributes = this.getAttributeNames();
+
+          attributes.forEach((attribute) => {
+            const prevState: [] = CE.listeners.get(state) ?? [];
+            CE.listeners.set(state, {
+              [attribute]: [...prevState, this],
+            });
+          });
+
           return {
             key,
             content: this._state[key],
+            state,
           };
         }
 
         setState(newState: Partial<T>) {
-          const changedAttributes: (keyof T)[] = [];
           this._state = { ...this._state, ...newState };
+          const listener = CE.listeners.get(state) ?? [];
 
           for (const key in newState) {
-            if (
-              newState.hasOwnProperty(key) &&
-              this.constructor["observedAttributes"].includes(key)
-            ) {
-              changedAttributes.push(key);
+            if (listener.includes(key)) {
+              listener[key].render();
             }
-          }
-
-          if (changedAttributes.length > 0) {
-            this.notify(changedAttributes);
           }
         }
 
@@ -94,8 +110,10 @@ export class CE {
 
         private render() {
           const content = render.call(this);
-          this.shadowRoot!.innerHTML = content;
-          this.registerEventHandlers(rest);
+          if (content) {
+            this.shadowRoot.innerHTML = content;
+          }
+          this.registerEventHandlers({ ...handlers });
         }
 
         private notify(changedAttributes: (keyof T)[]) {
@@ -112,7 +130,7 @@ export class CE {
         }
 
         private registerEventHandlers(eventHandlers: {
-          [key: string]: () => void;
+          [key: string]: (this: CEInstance<T, K>) => void;
         }) {
           for (const [handlerName, handler] of Object.entries(eventHandlers)) {
             if (typeof handler === "function") {
@@ -132,20 +150,36 @@ export class CE {
   }
 }
 
+CE.define({
+  name: "render-value",
+  state: undefined,
+  render() {
+    this.shadowRoot.innerHTML = this.innerHTML;
+    this.innerHTML = "";
+
+    return "";
+  },
+});
+
 export function html<T>(
   strings: TemplateStringsArray,
-  ...values: (string | { key: string; content: T })[]
+  ...values: (
+    | string
+    | { key: string; content: T; state: { [key: string]: T } }
+  )[]
 ): string {
   return strings.reduce((result: string, str: string, index: number) => {
     const value = values[index];
+    if (!value) return result + str;
 
     const attribute = value && typeof value === "object" ? value.key : "";
-    const content = value && typeof value === "object" ? value.content : value;
 
     return (
       result +
       str +
-      (content !== undefined ? `<span ${attribute}>${content}</span>` : "")
+      (typeof value === "object"
+        ? `<render-value ${attribute}>${value.content}</render-value>`
+        : value)
     );
   }, "");
 }
