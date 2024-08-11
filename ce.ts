@@ -61,6 +61,7 @@ export class CE {
 
         connectedCallback() {
           this.render();
+          this.mapping();
           onConnect.call(this);
         }
 
@@ -76,8 +77,10 @@ export class CE {
           onAttributeChange.call(this, name, oldValue, newValue);
         }
 
-        bind(key: keyof T) {
+        mapping(){
+          const objectId = this.getAttribute('render-object-id');
           const attributes = this.getAttributeNames();
+          const state = Address.getObj(objectId);
 
           attributes.forEach((attribute) => {
             const prevState: [] = CE.listeners.get(state) ?? [];
@@ -85,7 +88,9 @@ export class CE {
               [attribute]: [...prevState, this],
             });
           });
+        }
 
+        bind(key: keyof T) {
           return {
             key,
             content: this._state[key],
@@ -98,8 +103,9 @@ export class CE {
           const listener = CE.listeners.get(state) ?? [];
 
           for (const key in newState) {
-            if (listener.includes(key)) {
-              listener[key].render();
+            const arr = listener[key] as [];
+            if (arr) {
+              arr.forEach((a: any) => a.render())
             }
           }
         }
@@ -173,13 +179,37 @@ export function html<T>(
     if (!value) return result + str;
 
     const attribute = value && typeof value === "object" ? value.key : "";
+    const objectId = value && typeof value === 'object' ? Address.getAddress(value.state) : "";
 
     return (
       result +
       str +
       (typeof value === "object"
-        ? `<render-value ${attribute}>${value.content}</render-value>`
+        ? `<render-value render-object-id=${objectId} ${attribute}>${value.content}</render-value>`
         : value)
     );
   }, "");
+}
+
+class Address{
+  static id = 0;
+
+  static address = new Map();
+  static idToObj = new Map();
+
+  static getAddress(obj: object){
+    const address = this.address.get(obj);
+
+    if(!address){
+      this.address.set(obj, String(this.id));
+      this.idToObj.set(String(this.id), obj);
+      this.id += 1;
+    }
+
+    return this.address.get(obj);
+  }
+
+  static getObj(id: string){
+    return this.idToObj.get(id);
+  }
 }
