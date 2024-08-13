@@ -77,13 +77,19 @@ export class CE {
           onAttributeChange.call(this, name, oldValue, newValue);
         }
 
-        mapping(){
-          const objectId = this.getAttribute('render-object-id');
+        mapping() {
+          const objectId = this.getAttribute("render-object-id");
           const attributes = this.getAttributeNames();
           const state = Address.getObj(objectId);
 
+          if (!state) return;
+
           attributes.forEach((attribute) => {
+            if (attribute === "render-object-id") return;
+
             const prevState: [] = CE.listeners.get(state) ?? [];
+            console.log(CE.listeners);
+
             CE.listeners.set(state, {
               [attribute]: [...prevState, this],
             });
@@ -105,7 +111,7 @@ export class CE {
           for (const key in newState) {
             const arr = listener[key] as [];
             if (arr) {
-              arr.forEach((a: any) => a.render())
+              arr.forEach((a: any) => a.render());
             }
           }
         }
@@ -179,7 +185,8 @@ export function html<T>(
     if (!value) return result + str;
 
     const attribute = value && typeof value === "object" ? value.key : "";
-    const objectId = value && typeof value === 'object' ? Address.getAddress(value.state) : "";
+    const objectId =
+      value && typeof value === "object" ? Address.getAddress(value.state) : "";
 
     return (
       result +
@@ -191,16 +198,16 @@ export function html<T>(
   }, "");
 }
 
-class Address{
+class Address {
   static id = 0;
 
   static address = new Map();
   static idToObj = new Map();
 
-  static getAddress(obj: object){
+  static getAddress(obj: object) {
     const address = this.address.get(obj);
 
-    if(!address){
+    if (!address) {
       this.address.set(obj, String(this.id));
       this.idToObj.set(String(this.id), obj);
       this.id += 1;
@@ -209,7 +216,7 @@ class Address{
     return this.address.get(obj);
   }
 
-  static getObj(id: string){
+  static getObj(id: string) {
     return this.idToObj.get(id);
   }
 }
