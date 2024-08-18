@@ -43,8 +43,8 @@ CE.define({
   state: countState,
   render() {
     return html`
-      <div>Count: ${this.bind("count")}</div>
-      <counter-button-group test="1"></counter-button-group>
+      <div count>Count: ${this.bind("count")} times</div>
+      <counter-button-group></counter-button-group>
       <user-info></user-info>
     `;
   },

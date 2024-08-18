@@ -21,7 +21,7 @@ export class CE {
   static listeners = new Map();
 
   static define<
-    T,
+    T extends object,
     K extends { [key: string]: (this: CEInstance<T, K>) => void }
   >(params: {
     name: string;
@@ -88,7 +88,6 @@ export class CE {
             if (attribute === "render-object-id") return;
 
             const prevState: [] = CE.listeners.get(state) ?? [];
-            console.log(CE.listeners);
 
             CE.listeners.set(state, {
               [attribute]: [...prevState, this],
@@ -111,7 +110,9 @@ export class CE {
           for (const key in newState) {
             const arr = listener[key] as [];
             if (arr) {
-              arr.forEach((a: any) => a.render());
+              arr.forEach((a: any) => {
+                a.shadowRoot.innerHTML = this._state[key];
+              });
             }
           }
         }
@@ -126,19 +127,6 @@ export class CE {
             this.shadowRoot.innerHTML = content;
           }
           this.registerEventHandlers({ ...handlers });
-        }
-
-        private notify(changedAttributes: (keyof T)[]) {
-          for (const key of changedAttributes) {
-            const root = document.querySelector(CE.entryPoint).shadowRoot;
-
-            const elements = root?.querySelectorAll(`[${String(key)}]`);
-
-            elements.forEach((element) => {
-              const newValue = this._state[key];
-              element.textContent = String(newValue);
-            });
-          }
         }
 
         private registerEventHandlers(eventHandlers: {
