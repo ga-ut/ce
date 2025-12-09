@@ -9,16 +9,70 @@ type CEInstance<T, K> = {
   handlers?: K;
 } & HTMLElement;
 
+class Router {
+  private entryElement: HTMLElement | null = null;
+
+  constructor() {
+    window.addEventListener("popstate", () => this.renderCurrent());
+    window.addEventListener("hashchange", () => this.renderCurrent());
+  }
+
+  setEntryElement(entryElement: HTMLElement) {
+    this.entryElement = entryElement;
+    this.renderCurrent();
+  }
+
+  renderCurrent() {
+    if (!this.entryElement) return;
+
+    const path = this.getCurrentPath();
+    const componentName = CE.routes.get(path);
+
+    if (!componentName) return;
+
+    const component = document.createElement(componentName);
+    this.entryElement.innerHTML = "";
+    this.entryElement.append(component);
+  }
+
+  private getCurrentPath() {
+    const hash = window.location.hash.replace(/^#/, "");
+    const path = hash || window.location.pathname || "/";
+
+    if (!path || path === "/index.html") return "/";
+
+    return path;
+  }
+}
+
 export class CE {
   static entryPoint: string;
+  static entryElement: HTMLElement | null;
+
+  static routes = new Map<string, string>();
+
+  static listeners = new Map();
+
+  static router = new Router();
+
+  static navigate = (path: string) => {
+    if (path.startsWith("#")) {
+      window.location.hash = path;
+    } else {
+      window.history.pushState({}, "", path);
+    }
+
+    this.router.renderCurrent();
+  };
 
   static setEntryPoint = (entryPoint: string) => {
     this.entryPoint = entryPoint;
     const root = document.createElement(entryPoint);
-    document.body.append(root);
-  };
+    this.entryElement = root;
 
-  static listeners = new Map();
+    document.body.append(root);
+    this.router.setEntryElement(root);
+  };
 
   static define<
     T extends object,
@@ -26,6 +80,7 @@ export class CE {
   >(params: {
     name: string;
     state: T;
+    route?: string;
     onConnect?: () => void;
     onDisconnect?: () => void;
     onAdopt?: () => void;
@@ -45,9 +100,14 @@ export class CE {
       onDisconnect = () => {},
       onAdopt = () => {},
       onAttributeChange = () => {},
+      route,
       render,
       handlers,
     } = params;
+
+    if (route) {
+      CE.routes.set(route, name);
+    }
 
     customElements.define(
       name,
