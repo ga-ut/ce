@@ -20,7 +20,7 @@ CE.define({
     add() {
       this.setState({ count: this.state.count + 1 });
     },
-    minus(this) {
+    minus() {
       this.setState({ count: this.state.count - 1 });
     },
   },

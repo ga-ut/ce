@@ -62,7 +62,7 @@ export class CE {
       window.history.pushState({}, "", path);
     }
 
-    this.router.renderCurrent();
+    CE.router.renderCurrent();
   };
 
   static setEntryPoint = (entryPoint: string) => {
