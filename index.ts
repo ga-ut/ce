@@ -1,4 +1,4 @@
 import { CE } from "@/ce";
 import "@/App";
 
-CE.setEntryPoint("main-app");
+CE.setEntryPoint("app-root");

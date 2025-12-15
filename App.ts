@@ -20,7 +20,7 @@ CE.define({
     add() {
       this.setState({ count: this.state.count + 1 });
     },
-    minus(this) {
+    minus() {
       this.setState({ count: this.state.count - 1 });
     },
   },
@@ -41,11 +41,38 @@ CE.define({
 CE.define({
   name: "main-app",
   state: countState,
+  route: "/",
   render() {
     return html`
+      <nav>
+        <button to-users="click">View users</button>
+      </nav>
       <div count>Count: ${this.bind("count")} times</div>
       <counter-button-group></counter-button-group>
+    `;
+  },
+  handlers: {
+    toUsers() {
+      CE.navigate("/users");
+    },
+  },
+});
+
+CE.define({
+  name: "users-page",
+  state: userState,
+  route: "/users",
+  render() {
+    return html`
+      <nav>
+        <button to-home="click">Back to home</button>
+      </nav>
       <user-info></user-info>
     `;
+  },
+  handlers: {
+    toHome() {
+      CE.navigate("/");
+    },
   },
 });
