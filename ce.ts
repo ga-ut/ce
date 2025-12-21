@@ -9,6 +9,124 @@ type CEInstance<T, K> = {
   handlers?: K;
 } & HTMLElement;
 
+type BoundNode = {
+  stateObj: object;
+  key: string;
+  node: HTMLElement;
+};
+
+type TrustedValue = { __trusted: string };
+
+const TRUSTED_MARK = "__trusted";
+
+function sanitizeText(value: unknown) {
+  if (value === null || value === undefined) return "";
+  return String(value);
+}
+
+function isTrustedValue(value: unknown): value is TrustedValue {
+  return Boolean(value) && typeof value === "object" && TRUSTED_MARK in (value as object);
+}
+
+export function trustedHTML(value: string): TrustedValue {
+  return { __trusted: value };
+}
+
+type SlotDescriptor =
+  | { type: "text"; value: string }
+  | { type: "trusted"; value: string }
+  | {
+      type: "binding";
+      key: string;
+      address: string;
+      stateObj: object;
+      value: string;
+    };
+
+class TemplateResult {
+  private template: HTMLTemplateElement;
+  private slots: SlotDescriptor[] = [];
+
+  constructor(strings: TemplateStringsArray, values: unknown[]) {
+    let html = "";
+
+    strings.forEach((str, index) => {
+      html += str;
+      const value = values[index];
+
+      if (index >= values.length) return;
+
+      const slotId = this.slots.length;
+
+      if (value && typeof value === "object" && "key" in value && "state" in value) {
+        const attribute = (value as any).key;
+        const address = Address.getAddress((value as any).state);
+        this.slots.push({
+          type: "binding",
+          key: attribute,
+          address,
+          stateObj: (value as any).state,
+          value: sanitizeText((value as any).content),
+        });
+        html += `<span data-ce-slot="${slotId}" data-ce-bind-key="${attribute}" data-ce-bind-addr="${address}"></span>`;
+      } else if (isTrustedValue(value)) {
+        this.slots.push({ type: "trusted", value: value.__trusted });
+        html += `<span data-ce-slot="${slotId}"></span>`;
+      } else {
+        this.slots.push({ type: "text", value: sanitizeText(value) });
+        html += `<span data-ce-slot="${slotId}"></span>`;
+      }
+    });
+
+    this.template = document.createElement("template");
+    this.template.innerHTML = html;
+  }
+
+  renderInto(root: ShadowRoot, options: { hydrate?: boolean } = {}): BoundNode[] {
+    const hydrate = options.hydrate ?? false;
+    const boundNodes: BoundNode[] = [];
+
+    if (hydrate && root.childNodes.length) {
+      const targets = root.querySelectorAll<HTMLElement>("[data-ce-slot]");
+      this.processTargets(targets, boundNodes);
+      return boundNodes;
+    }
+
+    const fragment = this.template.content.cloneNode(true) as DocumentFragment;
+    const targets = fragment.querySelectorAll<HTMLElement>("[data-ce-slot]");
+    this.processTargets(targets, boundNodes);
+    root.replaceChildren(fragment);
+    return boundNodes;
+  }
+
+  private processTargets(targets: NodeListOf<HTMLElement>, boundNodes: BoundNode[]) {
+    targets.forEach((target) => {
+      const slotId = Number(target.dataset.ceSlot ?? "-1");
+      const descriptor = this.slots[slotId];
+      if (!descriptor) return;
+
+      switch (descriptor.type) {
+        case "trusted":
+          target.innerHTML = descriptor.value;
+          break;
+        case "text":
+          target.textContent = descriptor.value;
+          break;
+        case "binding":
+          target.dataset.ceBindKey = descriptor.key;
+          target.dataset.ceBindAddr = descriptor.address;
+          target.textContent = descriptor.value;
+          boundNodes.push({
+            stateObj: descriptor.stateObj,
+            key: descriptor.key,
+            node: target,
+          });
+          break;
+      }
+    });
+  }
+}
+
 class Router {
   private entryElement: HTMLElement | null = null;
 
@@ -51,7 +169,7 @@ export class CE {
 
   static routes = new Map<string, string>();
 
-  static listeners = new Map();
+  static listeners = new Map<object, Map<string, Set<HTMLElement>>>();
 
   static router = new Router();
 
@@ -90,7 +208,7 @@ export class CE {
       oldValue: any,
       newValue: any
     ) => void;
-    render: (this: CEInstance<T, K>) => string;
+    render: (this: CEInstance<T, K>) => TemplateResult;
     handlers?: K;
   }) {
     const {
@@ -113,6 +231,7 @@ export class CE {
       name,
       class extends HTMLElement {
         private _state: T = state;
+        private boundNodes: BoundNode[] = [];
 
         constructor() {
           super();
@@ -121,7 +240,6 @@ export class CE {
 
         connectedCallback() {
           this.render();
-          this.mapping();
           onConnect.call(this);
         }
 
@@ -137,24 +255,6 @@ export class CE {
           onAttributeChange.call(this, name, oldValue, newValue);
         }
 
-        mapping() {
-          const objectId = this.getAttribute("render-object-id");
-          const attributes = this.getAttributeNames();
-          const state = Address.getObj(objectId);
-
-          if (!state) return;
-
-          attributes.forEach((attribute) => {
-            if (attribute === "render-object-id") return;
-
-            const prevState: [] = CE.listeners.get(state) ?? [];
-
-            CE.listeners.set(state, {
-              [attribute]: [...prevState, this],
-            });
-          });
-        }
-
         bind(key: keyof T) {
           return {
             key,
@@ -164,14 +264,14 @@ export class CE {
         }
 
         setState(newState: Partial<T>) {
-          this._state = { ...this._state, ...newState };
-          const listener = CE.listeners.get(state) ?? [];
+          Object.assign(this._state, newState);
+          const listener = CE.listeners.get(this._state) ?? new Map();
 
           for (const key in newState) {
-            const arr = listener[key] as [];
-            if (arr) {
-              arr.forEach((a: any) => {
-                a.shadowRoot.innerHTML = this._state[key];
+            const nodes = listener.get(key) as Set<HTMLElement> | undefined;
+            if (nodes) {
+              nodes.forEach((node) => {
+                node.textContent = sanitizeText((this._state as any)[key]);
               });
             }
           }
@@ -182,9 +282,14 @@ export class CE {
         }
 
         private render() {
-          const content = render.call(this);
-          if (content) {
-            this.shadowRoot.innerHTML = content;
+          const template = render.call(this);
+          if (template instanceof TemplateResult) {
+            this.unregisterBindings();
+            const boundNodes = template.renderInto(this.shadowRoot as ShadowRoot, {
+              hydrate: (this.shadowRoot as ShadowRoot).childNodes.length > 0,
+            });
+            this.boundNodes = boundNodes;
+            this.registerBindings(boundNodes);
           }
           this.registerEventHandlers({ ...handlers });
         }
@@ -197,53 +302,55 @@ export class CE {
               const targetElements = this.shadowRoot?.querySelectorAll(
                 `[${handlerName}]`
               );
-
-              targetElements.forEach((targetElement) => {
+              targetElements?.forEach((targetElement) => {
                 const eventName = targetElement.getAttribute(handlerName);
                 targetElement.addEventListener(eventName, handler.bind(this));
               });
             }
           }
         }
+
+        private unregisterBindings() {
+          this.boundNodes.forEach(({ stateObj, key, node }) => {
+            const map = CE.listeners.get(stateObj);
+            const targets = map?.get(key);
+            targets?.delete(node);
+
+            if (targets && targets.size === 0) {
+              map?.delete(key);
+            }
+
+            if (map && map.size === 0) {
+              CE.listeners.delete(stateObj);
+            }
+          });
+          this.boundNodes = [];
+        }
+
+        private registerBindings(boundNodes: BoundNode[]) {
+          boundNodes.forEach(({ stateObj, key, node }) => {
+            const map = CE.listeners.get(stateObj) ?? new Map();
+            const nodes = map.get(key) ?? new Set<HTMLElement>();
+            nodes.add(node);
+            map.set(key, nodes);
+            CE.listeners.set(stateObj, map);
+          });
+        }
       }
     );
   }
 }
 
-CE.define({
-  name: "render-value",
-  state: undefined,
-  render() {
-    this.shadowRoot.innerHTML = this.innerHTML;
-    this.innerHTML = "";
-
-    return "";
-  },
-});
-
 export function html<T>(
   strings: TemplateStringsArray,
   ...values: (
     | string
+    | number
+    | TrustedValue
     | { key: string; content: T; state: { [key: string]: T } }
   )[]
-): string {
-  return strings.reduce((result: string, str: string, index: number) => {
-    const value = values[index];
-    if (!value) return result + str;
-
-    const attribute = value && typeof value === "object" ? value.key : "";
-    const objectId =
-      value && typeof value === "object" ? Address.getAddress(value.state) : "";
-
-    return (
-      result +
-      str +
-      (typeof value === "object"
-        ? `<render-value render-object-id=${objectId} ${attribute}>${value.content}</render-value>`
-        : value)
-    );
-  }, "");
+) {
+  return new TemplateResult(strings, values);
 }
 
 class Address {
