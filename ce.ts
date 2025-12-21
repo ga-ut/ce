@@ -109,13 +109,20 @@ export class CE {
       CE.routes.set(route, name);
     }
 
+    const cloneState = (value: T) => {
+      if (value === null || value === undefined) return value;
+      if (typeof structuredClone === "function") return structuredClone(value);
+      return JSON.parse(JSON.stringify(value));
+    };
+
     customElements.define(
       name,
       class extends HTMLElement {
-        private _state: T = state;
+        private _state: T;
 
         constructor() {
           super();
+          this._state = cloneState(state);
           this.attachShadow({ mode: "open" });
         }
 
@@ -140,18 +147,19 @@ export class CE {
         mapping() {
           const objectId = this.getAttribute("render-object-id");
           const attributes = this.getAttributeNames();
-          const state = Address.getObj(objectId);
+          const state = objectId ? Address.getObj(objectId) : this._state;
 
           if (!state) return;
 
           attributes.forEach((attribute) => {
             if (attribute === "render-object-id") return;
 
-            const prevState: [] = CE.listeners.get(state) ?? [];
+            const existingListeners: Map<string, HTMLElement[]> =
+              CE.listeners.get(state) ?? new Map();
+            const prevState = existingListeners.get(attribute) ?? [];
 
-            CE.listeners.set(state, {
-              [attribute]: [...prevState, this],
-            });
+            existingListeners.set(attribute, [...prevState, this]);
+            CE.listeners.set(state, existingListeners);
           });
         }
 
@@ -159,16 +167,20 @@ export class CE {
           return {
             key,
             content: this._state[key],
-            state,
+            state: this._state,
           };
         }
 
         setState(newState: Partial<T>) {
-          this._state = { ...this._state, ...newState };
-          const listener = CE.listeners.get(state) ?? [];
+          if (this._state && typeof this._state === "object") {
+            Object.assign(this._state as object, newState);
+          } else {
+            this._state = newState as T;
+          }
+          const listener = CE.listeners.get(this._state) ?? new Map();
 
           for (const key in newState) {
-            const arr = listener[key] as [];
+            const arr = listener.get(key) as [];
             if (arr) {
               arr.forEach((a: any) => {
                 a.shadowRoot.innerHTML = this._state[key];
