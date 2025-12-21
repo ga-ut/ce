@@ -19,6 +19,11 @@ type TrustedValue = { __trusted: string };
 
 const TRUSTED_MARK = "__trusted";
 
+type RenderRoot = ParentNode & {
+  replaceChildren: (...nodes: (Node | string)[]) => void;
+  querySelectorAll<E extends Element>(selectors: string): NodeListOf<E>;
+};
+
 function sanitizeText(value: unknown) {
   if (value === null || value === undefined) return "";
   return String(value);
@@ -35,6 +40,7 @@ export function trustedHTML(value: string): TrustedValue {
 type SlotDescriptor =
   | { type: "text"; value: string }
   | { type: "trusted"; value: string }
+  | { type: "template"; value: TemplateResult }
   | {
       type: "binding";
       key: string;
@@ -58,7 +64,10 @@ class TemplateResult {
 
       const slotId = this.slots.length;
 
-      if (value && typeof value === "object" && "key" in value && "state" in value) {
+      if (value instanceof TemplateResult) {
+        this.slots.push({ type: "template", value });
+        html += `<span data-ce-slot="${slotId}"></span>`;
+      } else if (value && typeof value === "object" && "key" in value && "state" in value) {
         const attribute = (value as any).key;
         const address = Address.getAddress((value as any).state);
         this.slots.push({
@@ -84,22 +93,36 @@ class TemplateResult {
 
   renderInto(root: ShadowRoot, options: { hydrate?: boolean } = {}): BoundNode[] {
     const hydrate = options.hydrate ?? false;
+    return this.renderIntoElement(root, { hydrate });
+  }
+
+  renderIntoElement(
+    root: RenderRoot,
+    options: { hydrate?: boolean } = {}
+  ): BoundNode[] {
+    const hydrate = options.hydrate ?? false;
     const boundNodes: BoundNode[] = [];
 
     if (hydrate && root.childNodes.length) {
       const targets = root.querySelectorAll<HTMLElement>("[data-ce-slot]");
-      this.processTargets(targets, boundNodes);
+      this.processTargets(targets, boundNodes, { hydrate });
       return boundNodes;
     }
 
     const fragment = this.template.content.cloneNode(true) as DocumentFragment;
     const targets = fragment.querySelectorAll<HTMLElement>("[data-ce-slot]");
-    this.processTargets(targets, boundNodes);
+    this.processTargets(targets, boundNodes, { hydrate });
     root.replaceChildren(fragment);
     return boundNodes;
   }
 
-  private processTargets(targets: NodeListOf<HTMLElement>, boundNodes: BoundNode[]) {
+  private processTargets(
+    targets: NodeListOf<HTMLElement>,
+    boundNodes: BoundNode[],
+    options: { hydrate?: boolean }
+  ) {
+    const { hydrate } = options;
+
     targets.forEach((target) => {
       const slotId = Number(target.dataset.ceSlot ?? "-1");
       const descriptor = this.slots[slotId];
@@ -112,6 +135,11 @@ class TemplateResult {
         case "text":
           target.textContent = descriptor.value;
           break;
+        case "template": {
+          const nestedBoundNodes = descriptor.value.renderIntoElement(target, { hydrate });
+          boundNodes.push(...nestedBoundNodes);
+          break;
+        }
         case "binding":
           target.dataset.ceBindKey = descriptor.key;
           target.dataset.ceBindAddr = descriptor.address;
@@ -346,6 +374,7 @@ export function html<T>(
   ...values: (
     | string
     | number
+    | TemplateResult
     | TrustedValue
     | { key: string; content: T; state: { [key: string]: T } }
   )[]
