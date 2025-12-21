@@ -178,7 +178,7 @@ export class CE {
       customElements.define(
         name,
         class extends HTMLElement {
-          private _state: T = JSON.parse(JSON.stringify(state));
+          private _state: T = state;
 
           constructor() {
             super();
@@ -206,16 +206,18 @@ export class CE {
           mapping() {
             const objectId = this.getAttribute("render-object-id");
             const attributes = this.getAttributeNames();
-            const state = Address.getObj(objectId);
+            const sharedState = Address.getObj(objectId) ?? this._state;
 
-            if (!state) return;
+            this._state = sharedState;
+
+            if (!sharedState) return;
 
             attributes.forEach((attribute) => {
               if (attribute === "render-object-id") return;
 
-              const prevState: [] = CE.listeners.get(state) ?? [];
+              const prevState: [] = CE.listeners.get(sharedState) ?? [];
 
-              CE.listeners.set(state, {
+              CE.listeners.set(sharedState, {
                 [attribute]: [...prevState, this],
               });
             });
@@ -225,13 +227,13 @@ export class CE {
             return {
               key,
               content: this._state[key],
-              state,
+              state: this._state,
             };
           }
 
           setState(newState: Partial<T>) {
-            this._state = { ...this._state, ...newState };
-            const listener = CE.listeners.get(state) ?? [];
+            Object.assign(this._state, newState);
+            const listener = CE.listeners.get(this._state) ?? [];
 
             for (const key in newState) {
               const arr = listener[key] as [];
