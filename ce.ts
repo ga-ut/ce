@@ -45,6 +45,18 @@ class Router {
   }
 }
 
+function cloneStateValue<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return ([...value] as unknown) as T;
+  }
+
+  if (value && typeof value === "object") {
+    return ({ ...(value as any) } as unknown) as T;
+  }
+
+  return value;
+}
+
 export class CE {
   static entryPoint: string;
   static entryElement: HTMLElement | null;
@@ -80,6 +92,7 @@ export class CE {
   >(params: {
     name: string;
     state: T | (() => T);
+    cloneState?: boolean;
     route?: string;
     onConnect?: () => void;
     onDisconnect?: () => void;
@@ -96,6 +109,7 @@ export class CE {
     const {
       name,
       state,
+      cloneState = false,
       onConnect = () => {},
       onDisconnect = () => {},
       onAdopt = () => {},
@@ -116,7 +130,12 @@ export class CE {
 
         constructor() {
           super();
-          this._state = typeof state === "function" ? state() : state;
+          const initialState = typeof state === "function" ? state() : state;
+
+          this._state =
+            cloneState && initialState && typeof initialState === "object"
+              ? cloneStateValue(initialState)
+              : initialState;
           this.attachShadow({ mode: "open" });
         }
 
