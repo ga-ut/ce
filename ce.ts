@@ -79,7 +79,7 @@ export class CE {
     K extends { [key: string]: (this: CEInstance<T, K>) => void }
   >(params: {
     name: string;
-    state: T;
+    state: T | (() => T);
     route?: string;
     onConnect?: () => void;
     onDisconnect?: () => void;
@@ -116,7 +116,7 @@ export class CE {
 
         constructor() {
           super();
-          this._state = state;
+          this._state = typeof state === "function" ? state() : state;
           this.attachShadow({ mode: "open" });
         }
 
