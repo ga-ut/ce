@@ -1,3 +1,7 @@
+export type Template = HTMLTemplateElement;
+
+export type RenderContent = string | Template;
+
 type CEInstance<T, K> = {
   state: T;
   setState: (newState: Partial<T>) => void;
@@ -90,7 +94,7 @@ export class CE {
       oldValue: any,
       newValue: any
     ) => void;
-    render: (this: CEInstance<T, K>) => string;
+    render: (this: CEInstance<T, K>) => RenderContent | Promise<RenderContent>;
     handlers?: K;
   }) {
     const {
@@ -113,6 +117,7 @@ export class CE {
       name,
       class extends HTMLElement {
         private _state: T = state;
+        private renderCallId = 0;
 
         constructor() {
           super();
@@ -120,7 +125,7 @@ export class CE {
         }
 
         connectedCallback() {
-          this.render();
+          void this.render();
           this.mapping();
           onConnect.call(this);
         }
@@ -175,18 +180,51 @@ export class CE {
               });
             }
           }
+
+          void this.render();
         }
 
         get state(): T {
           return this._state;
         }
 
-        private render() {
-          const content = render.call(this);
-          if (content) {
+        private setLoadingState() {
+          if (!this.shadowRoot) return;
+          this.shadowRoot.innerHTML = `<span>Loading...</span>`;
+        }
+
+        private hydrateShadowRoot(content: RenderContent) {
+          if (!this.shadowRoot) return;
+
+          if (typeof content === "string") {
+            if (content === "") return;
+
             this.shadowRoot.innerHTML = content;
+            return;
           }
-          this.registerEventHandlers({ ...handlers });
+
+          const cloned = content.content.cloneNode(true);
+          this.shadowRoot.replaceChildren(cloned);
+        }
+
+        private async render() {
+          const renderId = ++this.renderCallId;
+          const content = render.call(this);
+
+          if (content instanceof Promise) {
+            this.setLoadingState();
+            const resolvedContent = await content;
+
+            if (renderId !== this.renderCallId) return;
+
+            this.hydrateShadowRoot(resolvedContent);
+          } else {
+            this.hydrateShadowRoot(content);
+          }
+
+          if (renderId === this.renderCallId) {
+            this.registerEventHandlers({ ...handlers });
+          }
         }
 
         private registerEventHandlers(eventHandlers: {
