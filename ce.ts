@@ -197,6 +197,8 @@ export class CE {
           if (!this.shadowRoot) return;
 
           if (typeof content === "string") {
+            if (content === "") return;
+
             this.shadowRoot.innerHTML = content;
             return;
           }
