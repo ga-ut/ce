@@ -109,12 +109,6 @@ export class CE {
       CE.routes.set(route, name);
     }
 
-    const cloneState = (value: T) => {
-      if (value === null || value === undefined) return value;
-      if (typeof structuredClone === "function") return structuredClone(value);
-      return JSON.parse(JSON.stringify(value));
-    };
-
     customElements.define(
       name,
       class extends HTMLElement {
@@ -122,7 +116,7 @@ export class CE {
 
         constructor() {
           super();
-          this._state = cloneState(state);
+          this._state = state;
           this.attachShadow({ mode: "open" });
         }
 
