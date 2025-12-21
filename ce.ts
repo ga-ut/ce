@@ -9,26 +9,60 @@ type CEInstance<T, K> = {
   handlers?: K;
 } & HTMLElement;
 
+type RouteDefinition = {
+  path: string;
+  component: string;
+  preload?: (path: string) => Promise<void>;
+  onError?: (error: unknown) => string;
+};
+
 class Router {
   private entryElement: HTMLElement | null = null;
+  private hydrate = true;
 
   constructor() {
-    window.addEventListener("popstate", () => this.renderCurrent());
-    window.addEventListener("hashchange", () => this.renderCurrent());
+    if (typeof window !== "undefined") {
+      window.addEventListener("popstate", () => this.renderCurrent());
+      window.addEventListener("hashchange", () => this.renderCurrent());
+    }
   }
 
-  setEntryElement(entryElement: HTMLElement) {
+  setEntryElement(entryElement: HTMLElement, options?: { hydrate?: boolean }) {
     this.entryElement = entryElement;
+    this.hydrate = options?.hydrate ?? true;
     this.renderCurrent();
   }
 
-  renderCurrent() {
+  async renderCurrent() {
     if (!this.entryElement) return;
 
     const path = this.getCurrentPath();
-    const componentName = CE.routes.get(path);
+    const route = CE.routes.get(path);
 
-    if (!componentName) return;
+    if (!route) return;
+
+    try {
+      if (route.preload) {
+        await route.preload(path);
+      }
+    } catch (error) {
+      if (route.onError) {
+        this.entryElement.innerHTML = route.onError(error);
+        return;
+      }
+      throw error;
+    }
+
+    const componentName = route.component;
+    const currentChild = this.entryElement.firstElementChild as HTMLElement | null;
+
+    if (
+      this.hydrate &&
+      currentChild &&
+      currentChild.tagName.toLowerCase() === componentName
+    ) {
+      return;
+    }
 
     const component = document.createElement(componentName);
     this.entryElement.innerHTML = "";
@@ -36,6 +70,8 @@ class Router {
   }
 
   private getCurrentPath() {
+    if (typeof window === "undefined") return "/";
+
     const hash = window.location.hash.replace(/^#/, "");
     const path = hash || window.location.pathname || "/";
 
@@ -49,29 +85,47 @@ export class CE {
   static entryPoint: string;
   static entryElement: HTMLElement | null;
 
-  static routes = new Map<string, string>();
+  static routes = new Map<string, RouteDefinition>();
+  static definitions = new Map();
 
   static listeners = new Map();
 
   static router = new Router();
 
-  static navigate = (path: string) => {
-    if (path.startsWith("#")) {
-      window.location.hash = path;
-    } else {
-      window.history.pushState({}, "", path);
+  static navigate = async (path: string) => {
+    if (typeof window !== "undefined") {
+      if (path.startsWith("#")) {
+        window.location.hash = path;
+      } else {
+        window.history.pushState({}, "", path);
+      }
     }
 
-    CE.router.renderCurrent();
+    await CE.router.renderCurrent();
   };
 
-  static setEntryPoint = (entryPoint: string) => {
+  static setEntryPoint = (
+    entryPoint: string,
+    options?: { rootElement?: HTMLElement; hydrate?: boolean }
+  ) => {
     this.entryPoint = entryPoint;
-    const root = document.createElement(entryPoint);
+    const existing = options?.rootElement ??
+      (typeof document !== "undefined"
+        ? (document.querySelector(entryPoint) as HTMLElement | null)
+        : null);
+
+    const root = existing ?? (typeof document !== "undefined"
+      ? document.createElement(entryPoint)
+      : null);
+
+    if (!root) return;
+
     this.entryElement = root;
 
-    document.body.append(root);
-    this.router.setEntryElement(root);
+    if (!existing && typeof document !== "undefined") {
+      document.body.append(root);
+    }
+    this.router.setEntryElement(root, { hydrate: options?.hydrate });
   };
 
   static define<
@@ -91,6 +145,8 @@ export class CE {
       newValue: any
     ) => void;
     render: (this: CEInstance<T, K>) => string;
+    preload?: (path: string) => Promise<void>;
+    onError?: (error: unknown) => string;
     handlers?: K;
   }) {
     const {
@@ -101,112 +157,177 @@ export class CE {
       onAdopt = () => {},
       onAttributeChange = () => {},
       route,
+      preload,
+      onError,
       render,
       handlers,
     } = params;
 
+    CE.definitions.set(name, { state, render, handlers });
+
     if (route) {
-      CE.routes.set(route, name);
+      CE.routes.set(route, {
+        path: route,
+        component: name,
+        preload,
+        onError,
+      });
     }
 
-    customElements.define(
-      name,
-      class extends HTMLElement {
-        private _state: T = state;
+    if (typeof customElements !== "undefined") {
+      customElements.define(
+        name,
+        class extends HTMLElement {
+          private _state: T = JSON.parse(JSON.stringify(state));
 
-        constructor() {
-          super();
-          this.attachShadow({ mode: "open" });
-        }
+          constructor() {
+            super();
+            this.attachShadow({ mode: "open" });
+          }
 
-        connectedCallback() {
-          this.render();
-          this.mapping();
-          onConnect.call(this);
-        }
+          connectedCallback() {
+            this.render();
+            this.mapping();
+            onConnect.call(this);
+          }
 
-        disconnectedCallback() {
-          onDisconnect.call(this);
-        }
+          disconnectedCallback() {
+            onDisconnect.call(this);
+          }
 
-        adoptedCallback() {
-          onAdopt.call(this);
-        }
+          adoptedCallback() {
+            onAdopt.call(this);
+          }
 
-        attributeChangedCallback(name: string, oldValue: any, newValue: any) {
-          onAttributeChange.call(this, name, oldValue, newValue);
-        }
+          attributeChangedCallback(name: string, oldValue: any, newValue: any) {
+            onAttributeChange.call(this, name, oldValue, newValue);
+          }
 
-        mapping() {
-          const objectId = this.getAttribute("render-object-id");
-          const attributes = this.getAttributeNames();
-          const state = Address.getObj(objectId);
+          mapping() {
+            const objectId = this.getAttribute("render-object-id");
+            const attributes = this.getAttributeNames();
+            const state = Address.getObj(objectId);
 
-          if (!state) return;
+            if (!state) return;
 
-          attributes.forEach((attribute) => {
-            if (attribute === "render-object-id") return;
+            attributes.forEach((attribute) => {
+              if (attribute === "render-object-id") return;
 
-            const prevState: [] = CE.listeners.get(state) ?? [];
+              const prevState: [] = CE.listeners.get(state) ?? [];
 
-            CE.listeners.set(state, {
-              [attribute]: [...prevState, this],
+              CE.listeners.set(state, {
+                [attribute]: [...prevState, this],
+              });
             });
-          });
-        }
+          }
 
-        bind(key: keyof T) {
-          return {
-            key,
-            content: this._state[key],
-            state,
-          };
-        }
+          bind(key: keyof T) {
+            return {
+              key,
+              content: this._state[key],
+              state,
+            };
+          }
 
-        setState(newState: Partial<T>) {
-          this._state = { ...this._state, ...newState };
-          const listener = CE.listeners.get(state) ?? [];
+          setState(newState: Partial<T>) {
+            this._state = { ...this._state, ...newState };
+            const listener = CE.listeners.get(state) ?? [];
 
-          for (const key in newState) {
-            const arr = listener[key] as [];
-            if (arr) {
-              arr.forEach((a: any) => {
-                a.shadowRoot.innerHTML = this._state[key];
-              });
+            for (const key in newState) {
+              const arr = listener[key] as [];
+              if (arr) {
+                arr.forEach((a: any) => {
+                  a.shadowRoot.innerHTML = this._state[key];
+                });
+              }
+            }
+          }
+
+          get state(): T {
+            return this._state;
+          }
+
+          private render() {
+            const content = render.call(this);
+            if (content) {
+              this.shadowRoot.innerHTML = content;
+            }
+            this.registerEventHandlers({ ...handlers });
+          }
+
+          private registerEventHandlers(eventHandlers: {
+            [key: string]: (this: CEInstance<T, K>) => void;
+          }) {
+            for (const [handlerName, handler] of Object.entries(eventHandlers)) {
+              if (typeof handler === "function") {
+                const targetElements = this.shadowRoot?.querySelectorAll(
+                  `[${handlerName}]`
+                );
+
+                targetElements.forEach((targetElement) => {
+                  const eventName = targetElement.getAttribute(handlerName);
+                  targetElement.addEventListener(eventName, handler.bind(this));
+                });
+              }
             }
           }
         }
+      );
+    }
+  }
 
-        get state(): T {
-          return this._state;
-        }
+  static async renderRouteToString(path: string, options?: { entryPoint?: string }) {
+    const route = CE.routes.get(path) || CE.routes.get("/");
 
-        private render() {
-          const content = render.call(this);
-          if (content) {
-            this.shadowRoot.innerHTML = content;
-          }
-          this.registerEventHandlers({ ...handlers });
-        }
+    if (!route) return "";
 
-        private registerEventHandlers(eventHandlers: {
-          [key: string]: (this: CEInstance<T, K>) => void;
-        }) {
-          for (const [handlerName, handler] of Object.entries(eventHandlers)) {
-            if (typeof handler === "function") {
-              const targetElements = this.shadowRoot?.querySelectorAll(
-                `[${handlerName}]`
-              );
+    const definition = CE.definitions.get(route.component);
 
-              targetElements.forEach((targetElement) => {
-                const eventName = targetElement.getAttribute(handlerName);
-                targetElement.addEventListener(eventName, handler.bind(this));
-              });
-            }
-          }
-        }
+    if (!definition) return "";
+
+    let htmlContent = "";
+
+    try {
+      if (route.preload) {
+        await route.preload(path);
       }
-    );
+
+      htmlContent = `<${route.component}>${CE.renderComponentToString(
+        definition
+      )}</${route.component}>`;
+    } catch (error) {
+      if (route.onError) {
+        htmlContent = route.onError(error);
+      } else {
+        throw error;
+      }
+    }
+
+    const entry = options?.entryPoint ?? this.entryPoint ?? "div";
+
+    return `<${entry}>${htmlContent}</${entry}>`;
+  }
+
+  private static renderComponentToString(definition: any) {
+    const stateCopy = JSON.parse(JSON.stringify(definition.state));
+
+    const context = {
+      _state: stateCopy,
+      state: stateCopy,
+      bind(key: string) {
+        return {
+          key,
+          content: (stateCopy as any)[key],
+          state: stateCopy,
+        };
+      },
+      setState(newState: any) {
+        Object.assign(stateCopy, newState);
+      },
+      handlers: definition.handlers,
+    } as any;
+
+    return definition.render.call(context);
   }
 }
 
