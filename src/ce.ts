@@ -77,12 +77,60 @@ class Router {
   }
 }
 
-const cloneState = <T extends object>(state: T): T => {
-  if (typeof structuredClone === "function") {
-    return structuredClone(state);
+const isPlainObject = (value: unknown): value is Record<PropertyKey, unknown> => {
+  if (typeof value !== "object" || value === null) return false;
+
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+};
+
+const cloneObjectSafely = <T>(value: T, seen = new WeakMap<object, unknown>()): T => {
+  if (typeof value !== "object" || value === null) {
+    return value;
   }
 
-  return JSON.parse(JSON.stringify(state)) as T;
+  if (seen.has(value)) {
+    return seen.get(value) as T;
+  }
+
+  if (Array.isArray(value)) {
+    const clonedArray: unknown[] = [];
+    seen.set(value, clonedArray);
+
+    for (const item of value) {
+      clonedArray.push(cloneObjectSafely(item, seen));
+    }
+
+    return clonedArray as T;
+  }
+
+  if (!isPlainObject(value)) {
+    return value;
+  }
+
+  const clonedObject: Record<PropertyKey, unknown> = {};
+  seen.set(value, clonedObject);
+
+  for (const key of Reflect.ownKeys(value)) {
+    clonedObject[key] = cloneObjectSafely(
+      (value as Record<PropertyKey, unknown>)[key],
+      seen
+    );
+  }
+
+  return clonedObject as T;
+};
+
+const cloneState = <T extends object>(state: T): T => {
+  if (typeof structuredClone === "function") {
+    try {
+      return structuredClone(state);
+    } catch {
+      return cloneObjectSafely(state);
+    }
+  }
+
+  return cloneObjectSafely(state);
 };
 
 const toHtmlString = (content: RenderContent): string => {

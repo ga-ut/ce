@@ -177,4 +177,26 @@ describe("CE library", () => {
     expect(spy).toHaveBeenCalledTimes(1);
     expect(el.shadowRoot).toBeTruthy();
   });
+
+  it("mounts components when state includes non-cloneable values", async () => {
+    CE.define({
+      name: "x-non-cloneable-state",
+      state: {
+        count: 1,
+        format(value: number) {
+          return `count:${value}`;
+        },
+      },
+      render() {
+        return `<p>${this.state.format(this.state.count)}</p>`;
+      },
+    });
+
+    const el = document.createElement("x-non-cloneable-state") as HTMLElement;
+
+    expect(() => document.body.append(el)).not.toThrow();
+    await wait();
+
+    expect(el.shadowRoot?.textContent).toContain("count:1");
+  });
 });
