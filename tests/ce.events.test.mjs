@@ -107,3 +107,46 @@ test("handlers are called once after three rerenders", async () => {
     dom.window.close();
   }
 });
+
+test("non-bubbling focus handlers still fire after rerenders", async () => {
+  const dom = new JSDOM("<!doctype html><body></body>", {
+    url: "http://localhost/",
+  });
+
+  installDomGlobals(dom);
+
+  try {
+    const { CE } = await import(moduleUrl);
+
+    const tagName = `event-focus-${Date.now()}`;
+    const calls = { focus: 0 };
+
+    CE.define({
+      name: tagName,
+      state: { count: 0 },
+      render() {
+        return `<input onFocus="focus" /><span>${this.state.count}</span>`;
+      },
+      handlers: {
+        onFocus() {
+          calls.focus += 1;
+        },
+      },
+    });
+
+    const element = document.createElement(tagName);
+    document.body.append(element);
+
+    element.setState({ count: 1 });
+    element.setState({ count: 2 });
+    element.setState({ count: 3 });
+
+    const input = element.shadowRoot.querySelector("input");
+    input.dispatchEvent(new dom.window.FocusEvent("focus", { composed: true }));
+
+    assert.equal(calls.focus, 1);
+  } finally {
+    restoreDomGlobals();
+    dom.window.close();
+  }
+});

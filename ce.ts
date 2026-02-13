@@ -123,6 +123,7 @@ export class CE {
           {
             eventName: string;
             listener: EventListener;
+            capture: boolean;
           }
         >();
 
@@ -285,8 +286,9 @@ export class CE {
                 this.delegatedHandlers.set(delegatedHandlerKey, {
                   eventName,
                   listener,
+                  capture: true,
                 });
-                this.shadowRoot?.addEventListener(eventName, listener);
+                this.shadowRoot?.addEventListener(eventName, listener, true);
               });
             }
           }
@@ -297,7 +299,8 @@ export class CE {
 
             this.shadowRoot.removeEventListener(
               delegatedHandler.eventName,
-              delegatedHandler.listener
+              delegatedHandler.listener,
+              delegatedHandler.capture
             );
             this.delegatedHandlers.delete(delegatedHandlerKey);
           }
@@ -309,7 +312,8 @@ export class CE {
           for (const delegatedHandler of this.delegatedHandlers.values()) {
             this.shadowRoot.removeEventListener(
               delegatedHandler.eventName,
-              delegatedHandler.listener
+              delegatedHandler.listener,
+              delegatedHandler.capture
             );
           }
 
