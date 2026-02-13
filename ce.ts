@@ -118,6 +118,13 @@ export class CE {
       class extends HTMLElement {
         private _state: T = state;
         private renderCallId = 0;
+        private delegatedHandlers = new Map<
+          string,
+          {
+            eventName: string;
+            listener: EventListener;
+          }
+        >();
 
         constructor() {
           super();
@@ -131,6 +138,7 @@ export class CE {
         }
 
         disconnectedCallback() {
+          this.cleanupEventHandlers();
           onDisconnect.call(this);
         }
 
@@ -230,6 +238,10 @@ export class CE {
         private registerEventHandlers(eventHandlers: {
           [key: string]: (this: CEInstance<T, K>) => void;
         }) {
+          if (!this.shadowRoot) return;
+
+          const requiredDelegatedHandlers = new Set<string>();
+
           for (const [handlerName, handler] of Object.entries(eventHandlers)) {
             if (typeof handler === "function") {
               const targetElements = this.shadowRoot?.querySelectorAll(
@@ -238,10 +250,70 @@ export class CE {
 
               targetElements.forEach((targetElement) => {
                 const eventName = targetElement.getAttribute(handlerName);
-                targetElement.addEventListener(eventName, handler.bind(this));
+
+                if (!eventName) return;
+
+                const delegatedHandlerKey = `${handlerName}:${eventName}`;
+
+                requiredDelegatedHandlers.add(delegatedHandlerKey);
+
+                if (this.delegatedHandlers.has(delegatedHandlerKey)) return;
+
+                const listener: EventListener = (event) => {
+                  const eventTargets =
+                    typeof event.composedPath === "function"
+                      ? event.composedPath()
+                      : [event.target];
+
+                  for (const eventTarget of eventTargets) {
+                    if (!(eventTarget instanceof Element)) continue;
+
+                    const registeredEventName = eventTarget.getAttribute(
+                      handlerName
+                    );
+
+                    if (
+                      registeredEventName === eventName &&
+                      this.shadowRoot?.contains(eventTarget)
+                    ) {
+                      handler.call(this);
+                      break;
+                    }
+                  }
+                };
+
+                this.delegatedHandlers.set(delegatedHandlerKey, {
+                  eventName,
+                  listener,
+                });
+                this.shadowRoot?.addEventListener(eventName, listener);
               });
             }
           }
+
+          for (const [delegatedHandlerKey, delegatedHandler] of this
+            .delegatedHandlers) {
+            if (requiredDelegatedHandlers.has(delegatedHandlerKey)) continue;
+
+            this.shadowRoot.removeEventListener(
+              delegatedHandler.eventName,
+              delegatedHandler.listener
+            );
+            this.delegatedHandlers.delete(delegatedHandlerKey);
+          }
+        }
+
+        private cleanupEventHandlers() {
+          if (!this.shadowRoot) return;
+
+          for (const delegatedHandler of this.delegatedHandlers.values()) {
+            this.shadowRoot.removeEventListener(
+              delegatedHandler.eventName,
+              delegatedHandler.listener
+            );
+          }
+
+          this.delegatedHandlers.clear();
         }
       }
     );

@@ -1,12 +1,14 @@
 {
   "devDependencies": {
-    "esbuild": "^0.23.0"
+    "esbuild": "^0.23.0",
+    "jsdom": "^24.1.0"
   },
   "name": "ga-ut-blog",
   "version": "1.0.0",
   "scripts": {
     "build": "esbuild index.ts --bundle --outfile=ce.js",
-    "dev": "npx http-server ."
+    "dev": "npx http-server .",
+    "test": "node --test tests/*.test.mjs"
   },
   "repository": {
     "type": "git",
