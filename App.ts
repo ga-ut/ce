@@ -10,18 +10,28 @@ const createUserState = () => ({
 
 CE.define({
   name: "counter-button-group",
-  stateFactory: createCountState,
   render() {
     return html` <div>
-      <button add="click">+</button> <button minus="click">-</button>
+      <button increment="click">+</button>
+      <button decrement="click">-</button>
     </div>`;
   },
   handlers: {
-    add() {
-      this.setState({ count: this.state.count + 1 });
+    increment() {
+      this.dispatchEvent(
+        new CustomEvent("increment", {
+          bubbles: true,
+          composed: true,
+        })
+      );
     },
-    minus() {
-      this.setState({ count: this.state.count - 1 });
+    decrement() {
+      this.dispatchEvent(
+        new CustomEvent("decrement", {
+          bubbles: true,
+          composed: true,
+        })
+      );
     },
   },
 });
@@ -48,10 +58,19 @@ CE.define({
         <button to-users="click">View users</button>
       </nav>
       <div count>Count: ${this.bind("count")} times</div>
-      <counter-button-group></counter-button-group>
+      <counter-button-group
+        increment="increment"
+        decrement="decrement"
+      ></counter-button-group>
     `;
   },
   handlers: {
+    increment() {
+      this.setState({ count: this.state.count + 1 });
+    },
+    decrement() {
+      this.setState({ count: this.state.count - 1 });
+    },
     toUsers() {
       CE.navigate("/users");
     },
