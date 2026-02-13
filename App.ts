@@ -1,16 +1,16 @@
 import { CE, html } from "@/ce";
 
-const countState = {
+const createCountState = () => ({
   count: 0,
-};
+});
 
-const userState = {
+const createUserState = () => ({
   users: ["test1", "test2", "test3"],
-};
+});
 
 CE.define({
   name: "counter-button-group",
-  state: countState,
+  stateFactory: createCountState,
   render() {
     return html` <div>
       <button add="click">+</button> <button minus="click">-</button>
@@ -28,10 +28,10 @@ CE.define({
 
 CE.define({
   name: "user-info",
-  state: userState,
+  stateFactory: createUserState,
   render() {
     return html`<div>
-      ${userState.users.reduce((result, user) => {
+      ${this.state.users.reduce((result, user) => {
         return result + html` <div>${user}</div> `;
       }, "")}
     </div>`;
@@ -40,7 +40,7 @@ CE.define({
 
 CE.define({
   name: "main-app",
-  state: countState,
+  stateFactory: createCountState,
   route: "/",
   render() {
     return html`
@@ -60,7 +60,7 @@ CE.define({
 
 CE.define({
   name: "users-page",
-  state: userState,
+  stateFactory: createUserState,
   route: "/users",
   render() {
     return html`

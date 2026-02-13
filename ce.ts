@@ -83,7 +83,9 @@ export class CE {
     K extends { [key: string]: (this: CEInstance<T, K>) => void }
   >(params: {
     name: string;
-    state: T;
+    state?: T | (() => T);
+    initialState?: T;
+    stateFactory?: () => T;
     route?: string;
     onConnect?: () => void;
     onDisconnect?: () => void;
@@ -100,6 +102,8 @@ export class CE {
     const {
       name,
       state,
+      initialState,
+      stateFactory,
       onConnect = () => {},
       onDisconnect = () => {},
       onAdopt = () => {},
@@ -109,6 +113,28 @@ export class CE {
       handlers,
     } = params;
 
+    const createState = () => {
+      if (typeof stateFactory === "function") {
+        return stateFactory();
+      }
+
+      if (typeof state === "function") {
+        return state();
+      }
+
+      const baseState = state ?? initialState;
+
+      if (!baseState) {
+        return {} as T;
+      }
+
+      if (typeof structuredClone === "function") {
+        return structuredClone(baseState);
+      }
+
+      return { ...baseState };
+    };
+
     if (route) {
       CE.routes.set(route, name);
     }
@@ -116,11 +142,12 @@ export class CE {
     customElements.define(
       name,
       class extends HTMLElement {
-        private _state: T = state;
+        private _state: T;
         private renderCallId = 0;
 
         constructor() {
           super();
+          this._state = createState();
           this.attachShadow({ mode: "open" });
         }
 
@@ -152,10 +179,12 @@ export class CE {
           attributes.forEach((attribute) => {
             if (attribute === "render-object-id") return;
 
-            const prevState: [] = CE.listeners.get(state) ?? [];
+            const prevState = CE.listeners.get(state) ?? {};
+            const prevElements = prevState[attribute] ?? [];
 
             CE.listeners.set(state, {
-              [attribute]: [...prevState, this],
+              ...prevState,
+              [attribute]: [...prevElements, this],
             });
           });
         }
@@ -164,21 +193,20 @@ export class CE {
           return {
             key,
             content: this._state[key],
-            state,
+            state: this._state,
           };
         }
 
         setState(newState: Partial<T>) {
-          this._state = { ...this._state, ...newState };
-          const listener = CE.listeners.get(state) ?? [];
+          Object.assign(this._state, newState);
+          const listener = CE.listeners.get(this._state) ?? {};
 
           for (const key in newState) {
-            const arr = listener[key] as [];
-            if (arr) {
-              arr.forEach((a: any) => {
-                a.shadowRoot.innerHTML = this._state[key];
-              });
-            }
+            const elements = listener[key] ?? [];
+
+            elements.forEach((element: any) => {
+              element.shadowRoot.innerHTML = this._state[key];
+            });
           }
 
           void this.render();
