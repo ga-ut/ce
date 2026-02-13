@@ -55,7 +55,7 @@ export class CE {
 
   static routes = new Map<string, string>();
 
-  static listeners = new Map();
+  static listeners = new Map<object, Map<string, Set<HTMLElement>>>();
 
   static router = new Router();
 
@@ -131,6 +131,7 @@ export class CE {
         }
 
         disconnectedCallback() {
+          this.cleanupMapping();
           onDisconnect.call(this);
         }
 
@@ -149,15 +150,43 @@ export class CE {
 
           if (!state) return;
 
+          const stateListeners = CE.listeners.get(state) ?? new Map<string, Set<HTMLElement>>();
+          CE.listeners.set(state, stateListeners);
+
           attributes.forEach((attribute) => {
             if (attribute === "render-object-id") return;
 
-            const prevState: [] = CE.listeners.get(state) ?? [];
-
-            CE.listeners.set(state, {
-              [attribute]: [...prevState, this],
-            });
+            const listenersByKey = stateListeners.get(attribute) ?? new Set<HTMLElement>();
+            listenersByKey.add(this);
+            stateListeners.set(attribute, listenersByKey);
           });
+        }
+
+        cleanupMapping() {
+          const objectId = this.getAttribute("render-object-id");
+          const state = Address.getObj(objectId);
+
+          if (!state) return;
+
+          const stateListeners = CE.listeners.get(state);
+          if (!stateListeners) return;
+
+          this.getAttributeNames().forEach((attribute) => {
+            if (attribute === "render-object-id") return;
+
+            const listenersByKey = stateListeners.get(attribute);
+            if (!listenersByKey) return;
+
+            listenersByKey.delete(this);
+
+            if (listenersByKey.size === 0) {
+              stateListeners.delete(attribute);
+            }
+          });
+
+          if (stateListeners.size === 0) {
+            CE.listeners.delete(state);
+          }
         }
 
         bind(key: keyof T) {
@@ -170,13 +199,16 @@ export class CE {
 
         setState(newState: Partial<T>) {
           this._state = { ...this._state, ...newState };
-          const listener = CE.listeners.get(state) ?? [];
+          const listener = CE.listeners.get(state);
 
-          for (const key in newState) {
-            const arr = listener[key] as [];
-            if (arr) {
-              arr.forEach((a: any) => {
-                a.shadowRoot.innerHTML = this._state[key];
+          if (listener) {
+            for (const key in newState) {
+              const listenersByKey = listener.get(key);
+
+              if (!listenersByKey) continue;
+
+              listenersByKey.forEach((targetElement) => {
+                targetElement.shadowRoot!.innerHTML = String(this._state[key]);
               });
             }
           }
