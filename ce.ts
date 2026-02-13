@@ -123,7 +123,6 @@ export class CE {
           {
             eventName: string;
             listener: EventListener;
-            capture: boolean;
           }
         >();
 
@@ -286,7 +285,6 @@ export class CE {
                 this.delegatedHandlers.set(delegatedHandlerKey, {
                   eventName,
                   listener,
-                  capture: true,
                 });
                 this.shadowRoot?.addEventListener(eventName, listener, true);
               });
@@ -300,7 +298,7 @@ export class CE {
             this.shadowRoot.removeEventListener(
               delegatedHandler.eventName,
               delegatedHandler.listener,
-              delegatedHandler.capture
+              true
             );
             this.delegatedHandlers.delete(delegatedHandlerKey);
           }
@@ -313,7 +311,7 @@ export class CE {
             this.shadowRoot.removeEventListener(
               delegatedHandler.eventName,
               delegatedHandler.listener,
-              delegatedHandler.capture
+              true
             );
           }
 
