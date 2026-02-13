@@ -1,37 +1,47 @@
 import { CE, html } from "@/ce";
 
-const countState = {
+const createCountState = () => ({
   count: 0,
-};
+});
 
-const userState = {
+const createUserState = () => ({
   users: ["test1", "test2", "test3"],
-};
+});
 
 CE.define({
   name: "counter-button-group",
-  state: countState,
   render() {
     return html` <div>
-      <button add="click">+</button> <button minus="click">-</button>
+      <button increment="click">+</button>
+      <button decrement="click">-</button>
     </div>`;
   },
   handlers: {
-    add() {
-      this.setState({ count: this.state.count + 1 });
+    increment() {
+      this.dispatchEvent(
+        new CustomEvent("increment", {
+          bubbles: true,
+          composed: true,
+        })
+      );
     },
-    minus() {
-      this.setState({ count: this.state.count - 1 });
+    decrement() {
+      this.dispatchEvent(
+        new CustomEvent("decrement", {
+          bubbles: true,
+          composed: true,
+        })
+      );
     },
   },
 });
 
 CE.define({
   name: "user-info",
-  state: userState,
+  state: createUserState(),
   render() {
     return html`<div>
-      ${userState.users.reduce((result, user) => {
+      ${this.state.users.reduce((result, user) => {
         return result + html` <div>${user}</div> `;
       }, "")}
     </div>`;
@@ -40,7 +50,7 @@ CE.define({
 
 CE.define({
   name: "main-app",
-  state: countState,
+  state: createCountState(),
   route: "/",
   render() {
     return html`
@@ -48,10 +58,19 @@ CE.define({
         <button to-users="click">View users</button>
       </nav>
       <div count>Count: ${this.bind("count")} times</div>
-      <counter-button-group></counter-button-group>
+      <counter-button-group
+        increment="increment"
+        decrement="decrement"
+      ></counter-button-group>
     `;
   },
   handlers: {
+    increment() {
+      this.setState({ count: this.state.count + 1 });
+    },
+    decrement() {
+      this.setState({ count: this.state.count - 1 });
+    },
     toUsers() {
       CE.navigate("/users");
     },
@@ -60,7 +79,7 @@ CE.define({
 
 CE.define({
   name: "users-page",
-  state: userState,
+  state: createUserState(),
   route: "/users",
   render() {
     return html`
