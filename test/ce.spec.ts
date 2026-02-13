@@ -178,6 +178,39 @@ describe("CE library", () => {
     expect(el.shadowRoot).toBeTruthy();
   });
 
+
+
+  it("isolates nested plain object state when fallback clone is used", async () => {
+    CE.define({
+      name: "x-fallback-nested-isolation",
+      state: {
+        data: { count: 0 },
+        format(value: number) {
+          return `${value}`;
+        },
+      },
+      render() {
+        return html`<p>${this.state.format(this.state.data.count)}</p><button inc="click">+</button>`;
+      },
+      handlers: {
+        inc() {
+          this.state.data.count += 1;
+          this.setState({ data: this.state.data });
+        },
+      },
+    });
+
+    const one = document.createElement("x-fallback-nested-isolation") as HTMLElement;
+    const two = document.createElement("x-fallback-nested-isolation") as HTMLElement;
+    document.body.append(one, two);
+
+    const oneButton = one.shadowRoot?.querySelector("button") as HTMLButtonElement;
+    oneButton.click();
+    await wait();
+
+    expect(one.shadowRoot?.textContent).toContain("1");
+    expect(two.shadowRoot?.textContent).toContain("0");
+  });
   it("mounts components when state includes non-cloneable values", async () => {
     CE.define({
       name: "x-non-cloneable-state",

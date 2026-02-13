@@ -111,7 +111,7 @@ const cloneObjectSafely = <T>(value: T, seen = new WeakMap<object, unknown>()): 
   const clonedObject: Record<PropertyKey, unknown> = {};
   seen.set(value, clonedObject);
 
-  for (const key of Reflect.ownKeys(value)) {
+  for (const key of Object.keys(value)) {
     clonedObject[key] = cloneObjectSafely(
       (value as Record<PropertyKey, unknown>)[key],
       seen
