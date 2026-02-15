@@ -198,7 +198,7 @@ async function validateMarkdownLinks(filePath, markdown, headingCache) {
   const currentDir = path.dirname(filePath);
 
   for (const rawLink of links) {
-    if (!rawLink || rawLink.startsWith('<') || isExternalLink(rawLink)) {
+    if (!rawLink || isExternalLink(rawLink)) {
       continue;
     }
 

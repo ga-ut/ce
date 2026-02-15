@@ -56,3 +56,22 @@ test('docs validator supports markdown link titles and escaped destinations', as
     await rm(tmpDir, { recursive: true, force: true });
   }
 });
+
+test('docs validator checks angle-bracket markdown destinations', async () => {
+  const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'docs-validate-'));
+  const fixtureDir = path.join(docsRoot, `.tmp-validate-${path.basename(tmpDir)}`);
+
+  try {
+    await mkdir(fixtureDir, { recursive: true });
+
+    const guideDoc = path.join(fixtureDir, 'guide.md');
+    await writeFile(guideDoc, ['# Guide', '[Missing](<./missing file.md>)'].join('\n'), 'utf8');
+
+    const result = await runDocsValidation();
+    assert.equal(result.code, 1, result.output);
+    assert.match(result.output, /Broken relative link '\.\/missing file\.md'/);
+  } finally {
+    await rm(fixtureDir, { recursive: true, force: true });
+    await rm(tmpDir, { recursive: true, force: true });
+  }
+});
