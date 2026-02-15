@@ -22,7 +22,8 @@
     "test": "vitest run",
     "build": "tsup src/index.ts --format esm,cjs --dts --clean",
     "pack:check": "npm pack --dry-run",
-    "test:events": "node --test tests/*.test.mjs"
+    "test:events": "node --test tests/*.test.mjs",
+    "docs:validate": "node scripts/validate-docs.mjs"
   },
   "devDependencies": {
     "jsdom": "^25.0.1",
