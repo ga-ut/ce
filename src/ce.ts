@@ -50,12 +50,23 @@ type RouteDefinition = {
 class Router {
   private entryElement: HTMLElement | null = null;
   private hydrate = true;
+  private renderToken = 0;
+  private ignoreNextHashChange = false;
 
   constructor() {
     if (typeof window === "undefined") return;
 
-    window.addEventListener("popstate", () => this.renderCurrent());
-    window.addEventListener("hashchange", () => this.renderCurrent());
+    window.addEventListener("popstate", () => {
+      void this.renderCurrent();
+    });
+    window.addEventListener("hashchange", () => {
+      if (this.ignoreNextHashChange) {
+        this.ignoreNextHashChange = false;
+        return;
+      }
+
+      void this.renderCurrent();
+    });
   }
 
   setEntryElement(entryElement: HTMLElement, options?: { hydrate?: boolean }) {
@@ -68,9 +79,22 @@ class Router {
     CE.routes.set(route, routeDefinition);
   }
 
+  async navigate(path: string) {
+    if (path.startsWith("#")) {
+      this.ignoreNextHashChange = true;
+      window.location.hash = path;
+      await this.renderCurrent();
+      return;
+    }
+
+    window.history.pushState({}, "", path);
+    await this.renderCurrent();
+  }
+
   async renderCurrent() {
     if (!this.entryElement) return;
 
+    const token = ++this.renderToken;
     const path = this.getCurrentPath();
     const routeDefinition = CE.routes.get(path);
     if (!routeDefinition) return;
@@ -80,11 +104,19 @@ class Router {
         await routeDefinition.preload(path);
       }
     } catch (error) {
+      if (token !== this.renderToken || path !== this.getCurrentPath()) {
+        return;
+      }
+
       if (routeDefinition.onError) {
         this.entryElement.innerHTML = routeDefinition.onError(error);
         return;
       }
       throw error;
+    }
+
+    if (token !== this.renderToken || path !== this.getCurrentPath()) {
+      return;
     }
 
     const componentName = routeDefinition.component;
@@ -194,13 +226,7 @@ export class CE {
   static router = new Router();
 
   static async navigate(path: string) {
-    if (path.startsWith("#")) {
-      window.location.hash = path;
-    } else {
-      window.history.pushState({}, "", path);
-    }
-
-    await CE.router.renderCurrent();
+    await CE.router.navigate(path);
   }
 
   static setEntryPoint(
@@ -456,7 +482,7 @@ export class CE {
         await routeDefinition.preload(path);
       }
 
-      routeMarkup = `<${routeDefinition.component}>${CE.renderComponentToString(
+      routeMarkup = `<${routeDefinition.component}>${await CE.renderComponentToString(
         definition
       )}</${routeDefinition.component}>`;
     } catch (error) {
@@ -471,7 +497,7 @@ export class CE {
     return `<${entryTag}>${routeMarkup}</${entryTag}>`;
   }
 
-  private static renderComponentToString(definition: {
+  private static async renderComponentToString(definition: {
     state: Record<string, any>;
     render: (this: any) => RenderContent | Promise<RenderContent>;
     handlers?: CEHandlers<any>;
@@ -496,19 +522,17 @@ export class CE {
     };
 
     const rendered = definition.render.call(context);
-    if (rendered instanceof Promise) {
-      return "";
-    }
+    const resolved = rendered instanceof Promise ? await rendered : rendered;
 
-    if (typeof rendered === "string") {
-      return rendered;
+    if (typeof resolved === "string") {
+      return resolved;
     }
 
     if (typeof document === "undefined") {
       return "";
     }
 
-    return toHtmlString(rendered);
+    return toHtmlString(resolved);
   }
 
   private static id = 0;
