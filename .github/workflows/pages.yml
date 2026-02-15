@@ -1,0 +1,66 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare Pages artifact (docs/site + docs/data)
+        run: |
+          set -euo pipefail
+          mkdir -p _pages_artifact
+
+          if [[ -d docs/site ]]; then
+            cp -a docs/site _pages_artifact/site
+          else
+            echo "docs/site not found; skipping copy"
+          fi
+
+          if [[ -d docs/data ]]; then
+            cp -a docs/data _pages_artifact/data
+          else
+            echo "docs/data not found; skipping copy"
+          fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _pages_artifact
+
+      - name: 운영 가이드 (배포 실패 시)
+        if: failure()
+        run: |
+          echo "[운영 가이드] 배포 실패 시 docs/site, docs/data 경로 오설정 여부를 가장 먼저 점검하세요."
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: 운영 가이드 (배포 실패 시)
+        if: failure()
+        run: |
+          echo "[운영 가이드] 배포 실패 시 docs/site, docs/data 경로 오설정 여부를 가장 먼저 점검하세요."
