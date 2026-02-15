@@ -26,8 +26,18 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p _pages_artifact
-          cp -a docs/site _pages_artifact/site
-          cp -a docs/data _pages_artifact/data
+
+          if [[ -d docs/site ]]; then
+            cp -a docs/site _pages_artifact/site
+          else
+            echo "docs/site not found; skipping copy"
+          fi
+
+          if [[ -d docs/data ]]; then
+            cp -a docs/data _pages_artifact/data
+          else
+            echo "docs/data not found; skipping copy"
+          fi
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
