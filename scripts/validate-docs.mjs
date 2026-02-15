@@ -31,17 +31,25 @@ function toSlug(text) {
   return text
     .trim()
     .toLowerCase()
-    .replace(/[`~!@#$%^&*()+=,.<>/?\\|{}\[\]:;'"_-]+/g, '')
+    .replace(/[`~!@#$%^&*()+=,.<>/?\\|{}\[\]:;'"!]+/g, '')
     .replace(/\s+/g, '-');
 }
 
 function extractHeadingAnchors(markdown) {
   const anchors = new Set();
+  const slugCounts = new Map();
+
   for (const line of markdown.split('\n')) {
     const match = line.match(/^#{1,6}\s+(.+)$/);
     if (!match) continue;
-    anchors.add(toSlug(match[1]));
+
+    const baseSlug = toSlug(match[1]);
+    const duplicateCount = slugCounts.get(baseSlug) ?? 0;
+    const resolvedSlug = duplicateCount === 0 ? baseSlug : `${baseSlug}-${duplicateCount}`;
+    slugCounts.set(baseSlug, duplicateCount + 1);
+    anchors.add(resolvedSlug);
   }
+
   return anchors;
 }
 
@@ -83,9 +91,63 @@ async function ensurePathExists(filePath) {
   }
 }
 
+function parseMarkdownDestination(rawTarget) {
+  const text = rawTarget.trim();
+  if (!text) return '';
+
+  if (text.startsWith('<')) {
+    const closingBracketIndex = text.indexOf('>');
+    if (closingBracketIndex === -1) return '';
+    return text.slice(1, closingBracketIndex).trim();
+  }
+
+  return text.split(/\s+/, 1)[0];
+}
+
 function extractMarkdownLinks(markdown) {
-  const matches = markdown.matchAll(/\[[^\]]+\]\(([^)]+)\)/g);
-  return [...matches].map((match) => match[1].trim());
+  const links = [];
+
+  for (let i = 0; i < markdown.length; i += 1) {
+    if (markdown[i] !== '[') continue;
+
+    const closeBracketIndex = markdown.indexOf(']', i + 1);
+    if (closeBracketIndex === -1) continue;
+
+    const openParenIndex = closeBracketIndex + 1;
+    if (markdown[openParenIndex] !== '(') continue;
+
+    let cursor = openParenIndex + 1;
+    let depth = 1;
+    let escaped = false;
+
+    while (cursor < markdown.length && depth > 0) {
+      const char = markdown[cursor];
+
+      if (escaped) {
+        escaped = false;
+      } else if (char === '\\') {
+        escaped = true;
+      } else if (char === '(') {
+        depth += 1;
+      } else if (char === ')') {
+        depth -= 1;
+      }
+
+      cursor += 1;
+    }
+
+    if (depth !== 0) continue;
+
+    const rawTarget = markdown.slice(openParenIndex + 1, cursor - 1);
+    const destination = parseMarkdownDestination(rawTarget);
+    if (destination) {
+      links.push(destination);
+    }
+
+    i = cursor - 1;
+  }
+
+  return links;
 }
 
 function isExternalLink(link) {
@@ -116,7 +178,9 @@ async function validateMarkdownLinks(filePath, markdown, headingCache) {
       continue;
     }
 
-    const resolvedPath = path.resolve(currentDir, linkPathPart);
+    const resolvedPath = linkPathPart.startsWith('/')
+      ? path.join(repoRoot, linkPathPart.slice(1))
+      : path.resolve(currentDir, linkPathPart);
     const exists = await ensurePathExists(resolvedPath);
 
     if (!exists) {
