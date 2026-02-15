@@ -1,0 +1,20 @@
+{
+  "items": [
+    {
+      "id": "schema-baseline",
+      "status": "done",
+      "owner": "docs-team",
+      "lastUpdated": "2026-02-15",
+      "milestone": "2026-q1",
+      "priority": "high"
+    },
+    {
+      "id": "consumer-adoption",
+      "status": "planned",
+      "owner": "product-team",
+      "lastUpdated": "2026-02-15",
+      "milestone": "2026-q2",
+      "priority": "medium"
+    }
+  ]
+}

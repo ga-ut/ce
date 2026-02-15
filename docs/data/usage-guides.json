@@ -1,0 +1,20 @@
+{
+  "guides": [
+    {
+      "id": "getting-started",
+      "status": "done",
+      "owner": "docs-team",
+      "lastUpdated": "2026-02-15",
+      "milestone": "docs-v1",
+      "priority": "low"
+    },
+    {
+      "id": "advanced-events",
+      "status": "in-progress",
+      "owner": "docs-team",
+      "lastUpdated": "2026-02-15",
+      "milestone": "docs-v2",
+      "priority": "medium"
+    }
+  ]
+}

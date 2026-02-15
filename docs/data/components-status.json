@@ -1,0 +1,20 @@
+{
+  "components": [
+    {
+      "id": "core-engine",
+      "status": "in-progress",
+      "owner": "platform-team",
+      "lastUpdated": "2026-02-15",
+      "milestone": "m1",
+      "priority": "high"
+    },
+    {
+      "id": "event-system",
+      "status": "planned",
+      "owner": "platform-team",
+      "lastUpdated": "2026-02-15",
+      "milestone": "m2",
+      "priority": "medium"
+    }
+  ]
+}
