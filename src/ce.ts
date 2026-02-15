@@ -50,6 +50,7 @@ type RouteDefinition = {
 class Router {
   private entryElement: HTMLElement | null = null;
   private hydrate = true;
+  private renderToken = 0;
 
   constructor() {
     if (typeof window === "undefined") return;
@@ -71,6 +72,7 @@ class Router {
   async renderCurrent() {
     if (!this.entryElement) return;
 
+    const token = ++this.renderToken;
     const path = this.getCurrentPath();
     const routeDefinition = CE.routes.get(path);
     if (!routeDefinition) return;
@@ -80,11 +82,19 @@ class Router {
         await routeDefinition.preload(path);
       }
     } catch (error) {
+      if (token !== this.renderToken || path !== this.getCurrentPath()) {
+        return;
+      }
+
       if (routeDefinition.onError) {
         this.entryElement.innerHTML = routeDefinition.onError(error);
         return;
       }
       throw error;
+    }
+
+    if (token !== this.renderToken || path !== this.getCurrentPath()) {
+      return;
     }
 
     const componentName = routeDefinition.component;
@@ -456,7 +466,7 @@ export class CE {
         await routeDefinition.preload(path);
       }
 
-      routeMarkup = `<${routeDefinition.component}>${CE.renderComponentToString(
+      routeMarkup = `<${routeDefinition.component}>${await CE.renderComponentToString(
         definition
       )}</${routeDefinition.component}>`;
     } catch (error) {
@@ -471,7 +481,7 @@ export class CE {
     return `<${entryTag}>${routeMarkup}</${entryTag}>`;
   }
 
-  private static renderComponentToString(definition: {
+  private static async renderComponentToString(definition: {
     state: Record<string, any>;
     render: (this: any) => RenderContent | Promise<RenderContent>;
     handlers?: CEHandlers<any>;
@@ -496,19 +506,17 @@ export class CE {
     };
 
     const rendered = definition.render.call(context);
-    if (rendered instanceof Promise) {
-      return "";
-    }
+    const resolved = rendered instanceof Promise ? await rendered : rendered;
 
-    if (typeof rendered === "string") {
-      return rendered;
+    if (typeof resolved === "string") {
+      return resolved;
     }
 
     if (typeof document === "undefined") {
       return "";
     }
 
-    return toHtmlString(rendered);
+    return toHtmlString(resolved);
   }
 
   private static id = 0;

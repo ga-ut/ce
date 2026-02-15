@@ -158,6 +158,46 @@ describe("CE library", () => {
     expect(CE.entryElement?.innerHTML).toContain("boom");
   });
 
+  it("ignores stale preload completion from earlier navigation", async () => {
+    CE.setEntryPoint("ce-stale-entry");
+
+    const preloadResolvers: Array<() => void> = [];
+
+    CE.define({
+      name: "x-slow-page",
+      state: {},
+      route: "/slow",
+      preload: () =>
+        new Promise<void>((resolve) => {
+          preloadResolvers.push(resolve);
+        }),
+      render() {
+        return "<p>slow</p>";
+      },
+    });
+
+    CE.define({
+      name: "x-fast-page",
+      state: {},
+      route: "/fast",
+      render() {
+        return "<p>fast</p>";
+      },
+    });
+
+    const slowNavigation = CE.navigate("/slow");
+    await wait();
+    await CE.navigate("/fast");
+
+    expect(CE.entryElement?.firstElementChild?.tagName.toLowerCase()).toBe("x-fast-page");
+
+    preloadResolvers[0]?.();
+    await slowNavigation;
+    await wait();
+
+    expect(CE.entryElement?.firstElementChild?.tagName.toLowerCase()).toBe("x-fast-page");
+  });
+
   it("can render a route to string for server output", async () => {
     CE.define({
       name: "x-ssr-page",
@@ -172,6 +212,22 @@ describe("CE library", () => {
     expect(markup).toContain("<ce-entry>");
     expect(markup).toContain("<x-ssr-page>");
     expect(markup).toContain("server");
+  });
+
+  it("awaits async render output when rendering routes to string", async () => {
+    CE.define({
+      name: "x-ssr-async-page",
+      state: { label: "async-server" },
+      route: "/ssr-async",
+      async render() {
+        await wait();
+        return html`<p>${this.bind("label")}</p>`;
+      },
+    });
+
+    const markup = await CE.renderRouteToString("/ssr-async", { entryPoint: "ce-entry" });
+    expect(markup).toContain("<x-ssr-async-page>");
+    expect(markup).toContain("async-server");
   });
 
   it("keeps latest async render result when renders race", async () => {
