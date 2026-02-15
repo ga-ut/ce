@@ -120,6 +120,60 @@ describe("CE library", () => {
     expect(CE.entryElement?.firstElementChild?.tagName.toLowerCase()).toBe("x-users-page");
   });
 
+  it("supports route preload and error fallback on navigation", async () => {
+    CE.setEntryPoint("ce-route-entry");
+
+    const preload = vi.fn(async () => {});
+
+    CE.define({
+      name: "x-preload-page",
+      state: {},
+      route: "/preload",
+      preload,
+      render() {
+        return "<p>preload</p>";
+      },
+    });
+
+    CE.define({
+      name: "x-error-page",
+      state: {},
+      route: "/error",
+      preload: async () => {
+        throw new Error("boom");
+      },
+      onError(error) {
+        return `<p>${(error as Error).message}</p>`;
+      },
+      render() {
+        return "<p>error</p>";
+      },
+    });
+
+    await CE.navigate("/preload");
+    expect(preload).toHaveBeenCalledWith("/preload");
+    expect(CE.entryElement?.firstElementChild?.tagName.toLowerCase()).toBe("x-preload-page");
+
+    await CE.navigate("/error");
+    expect(CE.entryElement?.innerHTML).toContain("boom");
+  });
+
+  it("can render a route to string for server output", async () => {
+    CE.define({
+      name: "x-ssr-page",
+      state: { label: "server" },
+      route: "/ssr",
+      render() {
+        return html`<p>${this.bind("label")}</p>`;
+      },
+    });
+
+    const markup = await CE.renderRouteToString("/ssr", { entryPoint: "ce-entry" });
+    expect(markup).toContain("<ce-entry>");
+    expect(markup).toContain("<x-ssr-page>");
+    expect(markup).toContain("server");
+  });
+
   it("keeps latest async render result when renders race", async () => {
     const resolveQueue: Array<(value: string) => void> = [];
 

@@ -26,6 +26,8 @@ export type DefineParams<
   name: string;
   state: T;
   route?: string;
+  preload?: (path: string) => Promise<void>;
+  onError?: (error: unknown) => string;
   onConnect?: (this: CEInstance<T, K>) => void;
   onDisconnect?: (this: CEInstance<T, K>) => void;
   onAdopt?: (this: CEInstance<T, K>) => void;
@@ -39,8 +41,15 @@ export type DefineParams<
   handlers?: K;
 };
 
+type RouteDefinition = {
+  component: string;
+  preload?: (path: string) => Promise<void>;
+  onError?: (error: unknown) => string;
+};
+
 class Router {
   private entryElement: HTMLElement | null = null;
+  private hydrate = true;
 
   constructor() {
     if (typeof window === "undefined") return;
@@ -49,20 +58,45 @@ class Router {
     window.addEventListener("hashchange", () => this.renderCurrent());
   }
 
-  setEntryElement(entryElement: HTMLElement) {
+  setEntryElement(entryElement: HTMLElement, options?: { hydrate?: boolean }) {
     this.entryElement = entryElement;
-    this.renderCurrent();
+    this.hydrate = options?.hydrate ?? true;
+    void this.renderCurrent();
   }
 
-  registerRoute(route: string, name: string) {
-    CE.routes.set(route, name);
+  registerRoute(route: string, routeDefinition: RouteDefinition) {
+    CE.routes.set(route, routeDefinition);
   }
 
-  renderCurrent() {
+  async renderCurrent() {
     if (!this.entryElement) return;
 
-    const componentName = CE.routes.get(this.getCurrentPath());
-    if (!componentName) return;
+    const path = this.getCurrentPath();
+    const routeDefinition = CE.routes.get(path);
+    if (!routeDefinition) return;
+
+    try {
+      if (routeDefinition.preload) {
+        await routeDefinition.preload(path);
+      }
+    } catch (error) {
+      if (routeDefinition.onError) {
+        this.entryElement.innerHTML = routeDefinition.onError(error);
+        return;
+      }
+      throw error;
+    }
+
+    const componentName = routeDefinition.component;
+    const currentChild = this.entryElement.firstElementChild as HTMLElement | null;
+
+    if (
+      this.hydrate &&
+      currentChild &&
+      currentChild.tagName.toLowerCase() === componentName
+    ) {
+      return;
+    }
 
     this.entryElement.innerHTML = "";
     this.entryElement.append(document.createElement(componentName));
@@ -148,23 +182,35 @@ export class CE {
   static entryPoint = "";
   static entryElement: HTMLElement | null = null;
 
-  static routes = new Map<string, string>();
+  static routes = new Map<string, RouteDefinition>();
+  static definitions = new Map<
+    string,
+    {
+      state: Record<string, any>;
+      render: (this: CEInstance<any, any>) => RenderContent | Promise<RenderContent>;
+      handlers?: CEHandlers<any>;
+    }
+  >();
   static router = new Router();
 
-  static navigate(path: string) {
+  static async navigate(path: string) {
     if (path.startsWith("#")) {
       window.location.hash = path;
     } else {
       window.history.pushState({}, "", path);
     }
 
-    CE.router.renderCurrent();
+    await CE.router.renderCurrent();
   }
 
-  static setEntryPoint(entryPoint: string) {
+  static setEntryPoint(
+    entryPoint: string,
+    options?: { rootElement?: HTMLElement; hydrate?: boolean }
+  ) {
     this.entryPoint = entryPoint;
 
-    const existingRoot = document.querySelector<HTMLElement>(entryPoint);
+    const existingRoot =
+      options?.rootElement ?? document.querySelector<HTMLElement>(entryPoint);
     const root = existingRoot ?? document.createElement(entryPoint);
 
     this.entryElement = root;
@@ -173,7 +219,7 @@ export class CE {
       document.body.append(root);
     }
 
-    this.router.setEntryElement(root);
+    this.router.setEntryElement(root, { hydrate: options?.hydrate });
   }
 
   static define<
@@ -184,6 +230,8 @@ export class CE {
       name,
       state,
       route,
+      preload,
+      onError,
       render,
       handlers,
       onConnect = () => {},
@@ -192,8 +240,14 @@ export class CE {
       onAttributeChange = () => {},
     } = params;
 
+    CE.definitions.set(name, { state, render, handlers });
+
     if (route) {
-      CE.router.registerRoute(route, name);
+      CE.router.registerRoute(route, {
+        component: name,
+        preload,
+        onError,
+      });
     }
 
     if (customElements.get(name)) {
@@ -386,6 +440,75 @@ export class CE {
     }
 
     customElements.define(name, CEElement);
+  }
+
+  static async renderRouteToString(path: string, options?: { entryPoint?: string }) {
+    const routeDefinition = CE.routes.get(path) ?? CE.routes.get("/");
+    if (!routeDefinition) return "";
+
+    const definition = CE.definitions.get(routeDefinition.component);
+    if (!definition) return "";
+
+    let routeMarkup = "";
+
+    try {
+      if (routeDefinition.preload) {
+        await routeDefinition.preload(path);
+      }
+
+      routeMarkup = `<${routeDefinition.component}>${CE.renderComponentToString(
+        definition
+      )}</${routeDefinition.component}>`;
+    } catch (error) {
+      if (!routeDefinition.onError) {
+        throw error;
+      }
+
+      routeMarkup = routeDefinition.onError(error);
+    }
+
+    const entryTag = options?.entryPoint ?? this.entryPoint ?? "div";
+    return `<${entryTag}>${routeMarkup}</${entryTag}>`;
+  }
+
+  private static renderComponentToString(definition: {
+    state: Record<string, any>;
+    render: (this: any) => RenderContent | Promise<RenderContent>;
+    handlers?: CEHandlers<any>;
+  }) {
+    const stateCopy = cloneState(definition.state);
+    const componentId = CE.createInstanceId();
+
+    const context = {
+      state: stateCopy,
+      handlers: definition.handlers,
+      setState(newState: Record<string, any>) {
+        Object.assign(stateCopy, newState);
+      },
+      bind(key: string) {
+        return {
+          __ce_bind: true as const,
+          ownerId: componentId,
+          key,
+          content: stateCopy[key],
+        };
+      },
+    };
+
+    const rendered = definition.render.call(context);
+    if (rendered instanceof Promise) {
+      return "";
+    }
+
+    if (typeof rendered === "string") {
+      return rendered;
+    }
+
+    if (typeof document === "undefined") {
+      return "";
+    }
+
+    return toHtmlString(rendered);
   }
 
   private static id = 0;
