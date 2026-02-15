@@ -38,7 +38,7 @@ CE.define({
 
 CE.define({
   name: "user-info",
-  stateFactory: createUserState,
+  state: createUserState(),
   render() {
     return html`<div>
       ${this.state.users.reduce((result, user) => {
@@ -50,7 +50,7 @@ CE.define({
 
 CE.define({
   name: "main-app",
-  stateFactory: createCountState,
+  state: createCountState(),
   route: "/",
   render() {
     return html`
@@ -79,7 +79,7 @@ CE.define({
 
 CE.define({
   name: "users-page",
-  stateFactory: createUserState,
+  state: createUserState(),
   route: "/users",
   render() {
     return html`

@@ -1,10 +1,13 @@
 {
   "compilerOptions": {
-    "target": "es5",
-    "lib": ["es2017", "dom"],
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./*"]
-    }
-  }
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2020", "DOM"],
+    "strict": true,
+    "declaration": true,
+    "skipLibCheck": true,
+    "types": ["vitest/globals"]
+  },
+  "include": ["src", "test", "index.ts", "ce.ts"]
 }
