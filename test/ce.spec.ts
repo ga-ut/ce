@@ -198,6 +198,39 @@ describe("CE library", () => {
     expect(CE.entryElement?.firstElementChild?.tagName.toLowerCase()).toBe("x-fast-page");
   });
 
+  it("awaits hash navigation until async preload render completes", async () => {
+    CE.setEntryPoint("ce-hash-entry");
+
+    let resolvePreload = () => {};
+    const preloadPromise = new Promise<void>((resolve) => {
+      resolvePreload = resolve;
+    });
+
+    CE.define({
+      name: "x-hash-async-page",
+      state: {},
+      route: "/hash-async",
+      preload: () => preloadPromise,
+      render() {
+        return "<p>hash async</p>";
+      },
+    });
+
+    const navigation = CE.navigate("#/hash-async");
+    await wait();
+
+    expect(CE.entryElement?.firstElementChild?.tagName.toLowerCase()).not.toBe(
+      "x-hash-async-page"
+    );
+
+    resolvePreload();
+    await navigation;
+
+    expect(CE.entryElement?.firstElementChild?.tagName.toLowerCase()).toBe(
+      "x-hash-async-page"
+    );
+  });
+
   it("can render a route to string for server output", async () => {
     CE.define({
       name: "x-ssr-page",

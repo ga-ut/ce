@@ -51,12 +51,22 @@ class Router {
   private entryElement: HTMLElement | null = null;
   private hydrate = true;
   private renderToken = 0;
+  private ignoreNextHashChange = false;
 
   constructor() {
     if (typeof window === "undefined") return;
 
-    window.addEventListener("popstate", () => this.renderCurrent());
-    window.addEventListener("hashchange", () => this.renderCurrent());
+    window.addEventListener("popstate", () => {
+      void this.renderCurrent();
+    });
+    window.addEventListener("hashchange", () => {
+      if (this.ignoreNextHashChange) {
+        this.ignoreNextHashChange = false;
+        return;
+      }
+
+      void this.renderCurrent();
+    });
   }
 
   setEntryElement(entryElement: HTMLElement, options?: { hydrate?: boolean }) {
@@ -67,6 +77,18 @@ class Router {
 
   registerRoute(route: string, routeDefinition: RouteDefinition) {
     CE.routes.set(route, routeDefinition);
+  }
+
+  async navigate(path: string) {
+    if (path.startsWith("#")) {
+      this.ignoreNextHashChange = true;
+      window.location.hash = path;
+      await this.renderCurrent();
+      return;
+    }
+
+    window.history.pushState({}, "", path);
+    await this.renderCurrent();
   }
 
   async renderCurrent() {
@@ -204,13 +226,7 @@ export class CE {
   static router = new Router();
 
   static async navigate(path: string) {
-    if (path.startsWith("#")) {
-      window.location.hash = path;
-    } else {
-      window.history.pushState({}, "", path);
-    }
-
-    await CE.router.renderCurrent();
+    await CE.router.navigate(path);
   }
 
   static setEntryPoint(
