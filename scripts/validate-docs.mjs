@@ -91,6 +91,10 @@ async function ensurePathExists(filePath) {
   }
 }
 
+function unescapeMarkdownDestination(text) {
+  return text.replace(/\\(.)/g, '$1');
+}
+
 function parseMarkdownDestination(rawTarget) {
   const text = rawTarget.trim();
   if (!text) return '';
@@ -101,7 +105,40 @@ function parseMarkdownDestination(rawTarget) {
     return text.slice(1, closingBracketIndex).trim();
   }
 
-  return text.split(/\s+/, 1)[0];
+  let destinationEnd = text.length;
+  let escaped = false;
+  let depth = 0;
+
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      escaped = true;
+      continue;
+    }
+
+    if (char === '(') {
+      depth += 1;
+      continue;
+    }
+
+    if (char === ')' && depth > 0) {
+      depth -= 1;
+      continue;
+    }
+
+    if (depth === 0 && /\s/.test(char)) {
+      destinationEnd = i;
+      break;
+    }
+  }
+
+  return unescapeMarkdownDestination(text.slice(0, destinationEnd));
 }
 
 function extractMarkdownLinks(markdown) {
