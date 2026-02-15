@@ -15,3 +15,13 @@ Detailed signatures and compatibility policy are documented in [`docs/api.md`](.
 
 ## Release flow
 Release/rollback/smoke-test checklist is documented in [`docs/release.md`](./docs/release.md).
+
+## Operations
+- Pages URL: https://ga-ut.github.io/ce/
+- Status data refresh cycle: Weekly (every Monday 10:00 KST) and immediately after release
+- Operational owner (status updates): Operations Team (release duty)
+
+### Status data update → validation → deployment (Ops quick procedure)
+1. Update the status dataset and changelog source used by the Pages site.
+2. Validate locally (`npm run lint`, `npm run test`, `npm run build`) and verify status board rendering.
+3. Deploy to Pages and confirm the published board reflects the latest status data.
