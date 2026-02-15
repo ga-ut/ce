@@ -8,7 +8,7 @@ describe("CE state isolation", () => {
     if (!customElements.get(tagName)) {
       CE.define({
         name: tagName,
-        stateFactory: () => ({ count: 0 }),
+        state: { count: 0 },
         render() {
           return html`<div class="value">${String(this.state.count)}</div>
             <button inc="click">+</button>`;
