@@ -1,4 +1,4 @@
-const TASK_A_JSON_PATH = './task-a.json';
+const TASK_A_JSON_PATH = './data/roadmap.json';
 
 const NAV_ITEMS = [
   { href: 'index.html', label: 'Overview', key: 'index' },
