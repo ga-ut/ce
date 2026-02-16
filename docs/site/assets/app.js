@@ -35,7 +35,7 @@ function mountShell() {
     const footer = document.createElement('footer');
     footer.className = 'site-footer';
     footer.innerHTML = `
-      <p>References: <a href="../api.md">docs/api.md</a> · <a href="../release.md">docs/release.md</a></p>
+      <p>References: <a href="https://github.com/ga-ut/ce/blob/main/docs/api.md">docs/api.md</a> · <a href="https://github.com/ga-ut/ce/blob/main/docs/release.md">docs/release.md</a></p>
       <p>Task A data source: <code>${TASK_A_JSON_PATH}</code></p>
     `;
     shell.appendChild(footer);
