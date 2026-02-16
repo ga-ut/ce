@@ -22,13 +22,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare Pages artifact (docs/site + docs/data)
+      - name: Prepare Pages artifact (docs/site/* + docs/data)
         run: |
           set -euo pipefail
           mkdir -p _pages_artifact
 
           if [[ -d docs/site ]]; then
-            cp -a docs/site _pages_artifact/site
+            cp -a docs/site/. _pages_artifact/
           else
             echo "docs/site not found; skipping copy"
           fi
