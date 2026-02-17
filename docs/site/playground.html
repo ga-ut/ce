@@ -19,7 +19,17 @@
         <p class="status">실험 코드는 브라우저 내에서만 실행되며 저장소 소스에는 영향을 주지 않습니다.</p>
       </section>
 
+      <section class="card" aria-live="polite">
+        <h2>CE Repository Active Work</h2>
+        <p class="status" data-playground-roadmap-status>Loading roadmap items…</p>
+        <ul class="work-items" data-playground-roadmap-list></ul>
+      </section>
+
       <section class="card playground" aria-label="Interactive playground">
+        <div class="playground__presets" role="group" aria-label="Playground presets">
+          <button type="button" data-playground-preset="ce">CE + Shadow DOM 예제</button>
+          <button type="button" data-playground-preset="basic">기본 예제</button>
+        </div>
         <div class="playground__controls">
           <button type="button" data-playground-run>Run</button>
           <button type="button" data-playground-reset>Reset</button>

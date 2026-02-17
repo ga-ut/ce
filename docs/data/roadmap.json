@@ -9,6 +9,14 @@
       "priority": "high"
     },
     {
+      "id": "playground-active-work-board",
+      "status": "in-progress",
+      "owner": "docs-team",
+      "lastUpdated": "2026-02-16",
+      "milestone": "2026-q1",
+      "priority": "high"
+    },
+    {
       "id": "consumer-adoption",
       "status": "planned",
       "owner": "product-team",
