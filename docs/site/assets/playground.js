@@ -4,7 +4,13 @@ const DEFAULT_SOURCE = {
   js: `const button = document.querySelector('#demo-btn');\nconst status = document.querySelector('#demo-status');\n\nbutton?.addEventListener('click', () => {\n  status.textContent = 'Clicked at ' + new Date().toLocaleTimeString();\n});`,
 };
 
+function escapeScriptContent(source) {
+  return source.replace(/<\/script/gi, '<\\/script');
+}
+
 function buildPreviewDocument({ html, css, js }) {
+  const safeJs = escapeScriptContent(js);
+
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -15,7 +21,7 @@ function buildPreviewDocument({ html, css, js }) {
   <body>
     ${html}
     <script>
-${js}
+${safeJs}
 <\/script>
   </body>
 </html>`;
