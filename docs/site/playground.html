@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CE Docs Site | Playground</title>
+    <link rel="stylesheet" href="assets/styles.css" />
+    <script defer src="assets/app.js"></script>
+    <script defer src="assets/playground.js"></script>
+  </head>
+  <body data-page="playground">
+    <main>
+      <section class="card">
+        <h2>Playground</h2>
+        <p>
+          현재 작업물을 빠르게 검증할 수 있는 독립 실행 공간입니다. HTML/CSS/JS 코드를 입력한 뒤
+          <strong>Run</strong>을 누르면 우측 미리보기에서 즉시 렌더링됩니다.
+        </p>
+        <p class="status">실험 코드는 브라우저 내에서만 실행되며 저장소 소스에는 영향을 주지 않습니다.</p>
+      </section>
+
+      <section class="card playground" aria-label="Interactive playground">
+        <div class="playground__controls">
+          <button type="button" data-playground-run>Run</button>
+          <button type="button" data-playground-reset>Reset</button>
+          <span class="status" data-playground-status>Ready</span>
+        </div>
+
+        <div class="playground__layout">
+          <div class="playground__editors">
+            <label>
+              HTML
+              <textarea data-editor="html" spellcheck="false"></textarea>
+            </label>
+            <label>
+              CSS
+              <textarea data-editor="css" spellcheck="false"></textarea>
+            </label>
+            <label>
+              JS
+              <textarea data-editor="js" spellcheck="false"></textarea>
+            </label>
+          </div>
+          <div class="playground__preview-wrap">
+            <h3>Preview</h3>
+            <iframe title="Playground preview" data-playground-preview sandbox="allow-scripts"></iframe>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
