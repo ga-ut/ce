@@ -75,3 +75,58 @@ test('docs validator checks angle-bracket markdown destinations', async () => {
     await rm(tmpDir, { recursive: true, force: true });
   }
 });
+
+test('docs validator enforces docs/data item schema fields', async () => {
+  const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'docs-validate-'));
+  const schemaFixture = path.join(docsRoot, 'data', `.tmp-validate-${path.basename(tmpDir)}.json`);
+
+  try {
+    await writeFile(
+      schemaFixture,
+      JSON.stringify({ items: [{ id: 'only-id' }] }, null, 2),
+      'utf8'
+    );
+
+    const result = await runDocsValidation();
+    assert.equal(result.code, 1, result.output);
+    assert.match(result.output, /Missing required fields in 'items\[0\]': status, owner, lastUpdated, milestone, priority/);
+  } finally {
+    await rm(schemaFixture, { force: true });
+    await rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('docs validator accepts valid docs/data collection schema', async () => {
+  const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'docs-validate-'));
+  const schemaFixture = path.join(docsRoot, 'data', `.tmp-validate-${path.basename(tmpDir)}.json`);
+
+  try {
+    await writeFile(
+      schemaFixture,
+      JSON.stringify(
+        {
+          guides: [
+            {
+              id: 'guide-id',
+              status: 'done',
+              owner: 'docs-team',
+              lastUpdated: '2026-02-15',
+              milestone: 'docs-v1',
+              priority: 'low',
+            },
+          ],
+        },
+        null,
+        2
+      ),
+      'utf8'
+    );
+
+    const result = await runDocsValidation();
+    assert.equal(result.code, 0, result.output);
+    assert.match(result.output, /Docs validation passed/);
+  } finally {
+    await rm(schemaFixture, { force: true });
+    await rm(tmpDir, { recursive: true, force: true });
+  }
+});
