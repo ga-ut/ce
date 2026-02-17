@@ -30,6 +30,11 @@ Release/rollback/smoke-test checklist is documented in [`docs/release.md`](./doc
 2. Validate locally (`npm run lint`, `npm run test`, `npm run build`) and verify status board rendering.
 3. Deploy to Pages and confirm the published board reflects the latest status data.
 
+## Library distribution
+- Playground deployment (GitHub Pages) and library distribution (npm) are separate.
+- Users consume the package via `npm i @ga-ut/ce` after npm publish.
+- This repository includes `.github/workflows/npm-publish.yml`, which publishes on GitHub Release (`v*` tags) when `NPM_TOKEN` is configured.
+
 ## Docs Playground
 - `docs/site/playground.html` includes an **Active Work** board sourced from `docs/data/roadmap.json`.
 - Playground presets now include **CE + Shadow DOM** example that imports `@ga-ut/ce` and demonstrates `CE.define`-based custom element rendering.
