@@ -22,7 +22,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare Pages artifact (docs/site/* + docs/data)
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build package for playground runtime
+        run: npm run build
+
+      - name: Prepare Pages artifact (docs/site/* + docs/data + dist)
         run: |
           set -euo pipefail
           mkdir -p _pages_artifact
@@ -37,6 +49,12 @@ jobs:
             cp -a docs/data _pages_artifact/data
           else
             echo "docs/data not found; skipping copy"
+          fi
+
+          if [[ -d dist ]]; then
+            cp -a dist _pages_artifact/dist
+          else
+            echo "dist not found; skipping copy"
           fi
 
       - name: Upload Pages artifact
