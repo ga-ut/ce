@@ -4,7 +4,8 @@ const NAV_ITEMS = [
   { href: 'index.html', label: 'Overview', key: 'index' },
   { href: 'components.html', label: 'Components', key: 'components' },
   { href: 'roadmap.html', label: 'Roadmap', key: 'roadmap' },
-  { href: 'usage.html', label: 'Usage', key: 'usage' }
+  { href: 'usage.html', label: 'Usage', key: 'usage' },
+  { href: 'playground.html', label: 'Playground', key: 'playground' }
 ];
 
 function mountShell() {
