@@ -23,7 +23,9 @@
     "build": "tsup src/index.ts --format esm,cjs --dts --clean",
     "pack:check": "npm pack --dry-run",
     "test:events": "node --test tests/*.test.mjs",
-    "docs:validate": "node scripts/validate-docs.mjs"
+    "docs:validate": "node scripts/validate-docs.mjs",
+    "verify": "npm run lint && npm test && npm run build",
+    "verify:full": "npm run verify && npm run test:events && npm run docs:validate && npm run pack:check"
   },
   "devDependencies": {
     "jsdom": "^25.0.1",

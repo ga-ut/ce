@@ -7,7 +7,8 @@ const docsRoot = path.join(repoRoot, 'docs');
 
 /** @typedef {{ file: string, message: string }} ValidationError */
 
-const DOC_JSON_REQUIRED_FIELDS = ['id', 'title', 'version'];
+const DOC_DATA_ITEM_REQUIRED_FIELDS = ['id', 'status', 'owner', 'lastUpdated', 'milestone', 'priority'];
+const DOC_DATA_COLLECTION_KEYS = new Set(['components', 'items', 'guides']);
 
 async function walkFiles(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -53,6 +54,57 @@ function extractHeadingAnchors(markdown) {
   return anchors;
 }
 
+function validateDocDataCollection(filePath, parsed, errors) {
+  const collectionKeys = Object.keys(parsed).filter((key) => DOC_DATA_COLLECTION_KEYS.has(key));
+
+  if (collectionKeys.length === 0) {
+    errors.push({
+      file: filePath,
+      message: `Expected one of collection keys: ${Array.from(DOC_DATA_COLLECTION_KEYS).join(', ')}`,
+    });
+    return;
+  }
+
+  if (collectionKeys.length > 1) {
+    errors.push({
+      file: filePath,
+      message: `Multiple collection keys found: ${collectionKeys.join(', ')}`,
+    });
+    return;
+  }
+
+  const collectionKey = collectionKeys[0];
+  const entries = parsed[collectionKey];
+
+  if (!Array.isArray(entries)) {
+    errors.push({
+      file: filePath,
+      message: `'${collectionKey}' must be an array.`,
+    });
+    return;
+  }
+
+  for (let index = 0; index < entries.length; index += 1) {
+    const entry = entries[index];
+
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+      errors.push({
+        file: filePath,
+        message: `'${collectionKey}[${index}]' must be an object.`,
+      });
+      continue;
+    }
+
+    const missing = DOC_DATA_ITEM_REQUIRED_FIELDS.filter((field) => !(field in entry));
+    if (missing.length > 0) {
+      errors.push({
+        file: filePath,
+        message: `Missing required fields in '${collectionKey}[${index}]': ${missing.join(', ')}`,
+      });
+    }
+  }
+}
+
 async function validateJsonFile(filePath) {
   /** @type {ValidationError[]} */
   const errors = [];
@@ -71,12 +123,9 @@ async function validateJsonFile(filePath) {
     return errors;
   }
 
-  const missing = DOC_JSON_REQUIRED_FIELDS.filter((field) => !(field in parsed));
-  if (missing.length > 0) {
-    errors.push({
-      file: filePath,
-      message: `Missing required fields: ${missing.join(', ')}`,
-    });
+  const isDocsDataJson = toRepoRelative(filePath).startsWith('docs/data/');
+  if (isDocsDataJson) {
+    validateDocDataCollection(filePath, parsed, errors);
   }
 
   return errors;
