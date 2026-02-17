@@ -107,6 +107,29 @@ ol {
   padding-left: 1.2rem;
 }
 
+
+.playground__presets {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.playground__presets button {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #1f2937;
+  border-radius: 8px;
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+}
+
+.playground__presets button[aria-pressed='true'] {
+  border-color: #2563eb;
+  color: #2563eb;
+  font-weight: 600;
+}
+
 .playground__controls {
   display: flex;
   align-items: center;
@@ -177,4 +200,38 @@ ol {
   .playground__preview-wrap iframe {
     min-height: 360px;
   }
+}
+
+.work-items {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.work-items__item {
+  display: grid;
+  gap: 0.2rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f9fafb;
+  padding: 0.65rem;
+}
+
+.work-items__meta {
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.work-items__badge {
+  justify-self: start;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+  background: #ecfdf5;
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
 }

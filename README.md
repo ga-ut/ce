@@ -29,3 +29,9 @@ Release/rollback/smoke-test checklist is documented in [`docs/release.md`](./doc
 1. Update the status dataset and changelog source used by the Pages site.
 2. Validate locally (`npm run lint`, `npm run test`, `npm run build`) and verify status board rendering.
 3. Deploy to Pages and confirm the published board reflects the latest status data.
+
+## Docs Playground
+- `docs/site/playground.html` includes an **Active Work** board sourced from `docs/data/roadmap.json`.
+- Playground presets now include **CE + Shadow DOM** example that imports `@ga-ut/ce` and demonstrates `CE.define`-based custom element rendering.
+- Items with `status: "in-progress"` are rendered as current CE repository tasks for quick visibility during reviews.
+- Update roadmap data first, then run `npm run docs:validate` before publishing docs changes.
