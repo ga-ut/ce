@@ -2,8 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const repoRoot = '/workspace/ce';
+const repoRoot =
+  process.env.CE_REPO_ROOT ??
+  path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const siteFiles = [
   'docs/site/index.html',
   'docs/site/usage.html',

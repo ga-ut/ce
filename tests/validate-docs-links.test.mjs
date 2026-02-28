@@ -4,8 +4,11 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
-const repoRoot = '/workspace/ce';
+const repoRoot =
+  process.env.CE_REPO_ROOT ??
+  path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const docsRoot = path.join(repoRoot, 'docs');
 
 async function runDocsValidation() {

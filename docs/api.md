@@ -1,5 +1,27 @@
 # CE Public API & Compatibility Policy
 
+## Import paths
+- Web runtime:
+```ts
+import { CE, html } from "@ga-ut/ce/web";
+```
+- Core-only entrypoints:
+```ts
+import * as core from "@ga-ut/ce";
+import * as coreOnly from "@ga-ut/ce/core";
+```
+- `@ga-ut/ce` root does not export `CE` or `html`.
+
+## Breaking change (v2.0.0)
+- Before:
+```ts
+import { CE, html } from "@ga-ut/ce";
+```
+- After:
+```ts
+import { CE, html } from "@ga-ut/ce/web";
+```
+
 ## Stable API (SemVer protected)
 
 ### `CE.define(params)`

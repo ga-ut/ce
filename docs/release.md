@@ -22,6 +22,13 @@ Must include:
 - Migration guide
 - Affected API list
 
+### Migration checklist (v2.0.0)
+1. Replace all root imports:
+   - Before: `import { CE, html } from "@ga-ut/ce";`
+   - After: `import { CE, html } from "@ga-ut/ce/web";`
+2. Confirm no package consumer imports web runtime APIs from `@ga-ut/ce` root.
+3. Run validation gates in this repository before publish.
+
 ## Post-release smoke test
 Validate with sample app:
 - Route transitions

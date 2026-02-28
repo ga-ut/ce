@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CE, html } from "../src";
+import { CE, html } from "../src/web";
 
 const wait = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms));
 
