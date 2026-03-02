@@ -1,12 +1,24 @@
 # CE
 Custom Element library.
 
+## Usage (Web)
+```ts
+import { CE, html } from "@ga-ut/ce/web";
+```
+
 ## Public API
 Detailed signatures and compatibility policy are documented in [`docs/api.md`](./docs/api.md).
 
 ## Packaging
-- Entry points: `src/ce.ts`, `src/index.ts`
+- Entry points: `src/index.ts` (core), `src/core/index.ts`, `src/web/index.ts`
 - Outputs: ESM + CJS + type declarations via `tsup`
+
+## Breaking change (v2.0.0)
+- Root entrypoint no longer exposes the web runtime API.
+- Before:
+  - `import { CE, html } from "@ga-ut/ce";`
+- After:
+  - `import { CE, html } from "@ga-ut/ce/web";`
 
 ## Quality gates
 - `npm run lint`
@@ -37,6 +49,6 @@ Release/rollback/smoke-test checklist is documented in [`docs/release.md`](./doc
 
 ## Docs Playground
 - `docs/site/playground.html` includes an **Active Work** board sourced from `docs/data/roadmap.json`.
-- Playground presets now include **CE + Shadow DOM** example that imports `@ga-ut/ce` and demonstrates `CE.define`-based custom element rendering.
+- Playground presets now include **CE + Shadow DOM** example that imports `@ga-ut/ce/web` and demonstrates `CE.define`-based custom element rendering.
 - Items with `status: "in-progress"` are rendered as current CE repository tasks for quick visibility during reviews.
 - Update roadmap data first, then run `npm run docs:validate` before publishing docs changes.

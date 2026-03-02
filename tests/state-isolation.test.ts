@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CE, html } from "../ce";
+import { CE, html } from "../src/web";
 
 describe("CE state isolation", () => {
   it("does not leak state updates between component instances", async () => {
