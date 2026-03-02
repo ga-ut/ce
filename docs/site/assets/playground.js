@@ -1,5 +1,13 @@
 const ROADMAP_JSON_PATH_CANDIDATES = ['./data/roadmap.json', '../data/roadmap.json'];
-const DIST_MODULE_PATH_CANDIDATES = ['./dist/index.mjs', '../dist/index.mjs'];
+// Prefer the web entrypoint; keep root candidates as temporary compatibility fallback.
+const DIST_MODULE_PATH_CANDIDATES = [
+  './dist/web/index.mjs',
+  '../dist/web/index.mjs',
+  '../../dist/web/index.mjs',
+  './dist/index.mjs',
+  '../dist/index.mjs',
+  '../../dist/index.mjs',
+];
 
 let ceRuntimeModuleSourcePromise;
 
