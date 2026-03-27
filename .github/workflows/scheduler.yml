@@ -1,0 +1,22 @@
+name: scheduler
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+
+permissions:
+  issues: write
+
+jobs:
+  create-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          gh issue create \
+            --title "[TASK] periodic review" \
+            --body '{
+              "goal": "Analyze repo and suggest improvements",
+              "acceptance": ["no regressions", "tests pass"]
+            }'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

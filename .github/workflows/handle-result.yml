@@ -1,0 +1,45 @@
+name: handle-codex-result
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  process:
+    if: github.event.issue.pull_request != null
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          if [[ "$COMMENT_AUTHOR" != "$CODEX_LOGIN" ]]; then
+            exit 0
+          fi
+
+          BODY="$COMMENT_BODY"
+          PR=${{ github.event.issue.number }}
+          ISSUE_NUMBER=$(gh pr view "$PR" --json body --jq '.body' | sed -n 's/^<!-- SOURCE_ISSUE_ID=\([0-9][0-9]*\) -->$/\1/p' | head -n 1)
+          TOKEN=$(printf '%s\n' "$BODY" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+
+          if [[ "$TOKEN" == "TASK_INVALID" ]]; then
+            gh pr close "$PR"
+            if [[ -n "$ISSUE_NUMBER" ]]; then
+              gh issue close "$ISSUE_NUMBER"
+            fi
+          elif [[ "$TOKEN" == "TASK_DONE" ]]; then
+            {
+              printf '%s\n' '@codex verify this PR.' ''
+              printf '%s\n' 'If correct:' '- REVIEW_OK' '- merge this PR' '- delete branch' ''
+              printf '%s\n' 'If not:' '- explain issues'
+            } > verify-comment.txt
+
+            gh pr ready "$PR"
+            gh pr comment "$PR" --body-file verify-comment.txt
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
+          CODEX_LOGIN: ${{ vars.CODEX_LOGIN || 'openai-codex[bot]' }}

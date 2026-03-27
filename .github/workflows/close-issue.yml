@@ -1,0 +1,23 @@
+name: close-issue
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  issues: write
+  pull-requests: read
+
+jobs:
+  close:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          NUM=$(printf '%s\n' "$PR_BODY" | sed -n 's/^<!-- SOURCE_ISSUE_ID=\([0-9][0-9]*\) -->$/\1/p' | head -n 1)
+          if [[ -n "$NUM" ]]; then
+            gh issue close "$NUM"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_BODY: ${{ github.event.pull_request.body }}
