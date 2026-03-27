@@ -1,0 +1,39 @@
+name: issue-to-draft-pr
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: |
+          BRANCH=task-${{ github.event.issue.number }}
+          git checkout -b "$BRANCH"
+          git push origin HEAD:refs/heads/"$BRANCH"
+
+      - run: |
+          {
+            printf '<!-- SOURCE_ISSUE_ID=%s -->\n' "${{ github.event.issue.number }}"
+            printf '%s\n' '@codex' '' 'Execute this task:' ''
+            printf '%s\n' "$ISSUE_BODY" ''
+            printf '%s\n' 'Rules:' '- valid -> implement' '- invalid -> TASK_INVALID' '- uncertain -> TASK_FAILED' ''
+            printf '%s\n' 'After:' '- TASK_DONE / TASK_INVALID / TASK_FAILED' ''
+          } > pr-body.txt
+
+          gh pr create \
+            --title "Task #${{ github.event.issue.number }}" \
+            --body-file pr-body.txt \
+            --draft \
+            --base main \
+            --head task-${{ github.event.issue.number }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
