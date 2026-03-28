@@ -14,7 +14,7 @@ on:
         description: Task title / draft PR title
         required: false
         type: string
-        default: Scheduled task: periodic review
+        default: "Scheduled task: periodic review"
       task_body:
         description: Task body passed to Codex
         required: false
