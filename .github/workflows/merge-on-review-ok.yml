@@ -1,0 +1,65 @@
+name: merge-on-review-ok
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  merge:
+    if: github.event.issue.pull_request != null
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge task PR on Codex approval
+        run: |
+          if [[ "$COMMENT_AUTHOR" != "$CODEX_LOGIN" ]]; then
+            exit 0
+          fi
+
+          TOKEN=$(printf '%s\n' "$COMMENT_BODY" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+          if [[ "$TOKEN" != "REVIEW_OK" ]]; then
+            exit 0
+          fi
+
+          PR="$PR_NUMBER"
+          PR_BODY=$(gh pr view "$PR" --repo "$GH_REPO" --json body --jq '.body // ""')
+          PR_STATE=$(gh pr view "$PR" --repo "$GH_REPO" --json state --jq '.state')
+          PR_DRAFT=$(gh pr view "$PR" --repo "$GH_REPO" --json isDraft --jq '.isDraft')
+          HEAD_SHA=$(gh pr view "$PR" --repo "$GH_REPO" --json headRefOid --jq '.headRefOid')
+
+          if ! printf '%s\n' "$PR_BODY" | grep -q '^<!-- TASK_KEY='; then
+            echo "PR #$PR is not a task automation PR; skipping merge."
+            exit 0
+          fi
+
+          if [[ "$PR_STATE" != "OPEN" ]]; then
+            echo "PR #$PR is $PR_STATE; skipping merge."
+            exit 0
+          fi
+
+          if [[ "$PR_DRAFT" == "true" ]]; then
+            echo "PR #$PR is still draft; skipping merge."
+            exit 0
+          fi
+
+          gh pr merge "$PR" \
+            --repo "$GH_REPO" \
+            --merge \
+            --delete-branch \
+            --match-head-commit "$HEAD_SHA" || \
+          gh pr merge "$PR" \
+            --repo "$GH_REPO" \
+            --auto \
+            --merge \
+            --delete-branch \
+            --match-head-commit "$HEAD_SHA"
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
+          CODEX_LOGIN: ${{ vars.CODEX_LOGIN || 'openai-codex[bot]' }}
