@@ -6,26 +6,21 @@ on:
 
 permissions:
   actions: write
-  issues: write
 
 jobs:
-  create-issue:
+  create-pr:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          ISSUE_URL=$(gh issue create \
-            --repo "$GH_REPO" \
-            --title "[TASK] periodic review" \
-            --body '{
-              "goal": "Analyze repo and suggest improvements",
-              "acceptance": ["no regressions", "tests pass"]
-            }')
-          ISSUE_NUMBER="${ISSUE_URL##*/}"
-
           gh workflow run issue-to-pr.yml \
             --repo "$GH_REPO" \
             --ref "$GH_REF" \
-            -f issue_number="$ISSUE_NUMBER"
+            -f task_key="periodic-review" \
+            -f task_title="Scheduled task: periodic review" \
+            -f task_body='{
+              "goal": "Analyze repo and suggest improvements",
+              "acceptance": ["no regressions", "tests pass"]
+            }'
         env:
           GH_REF: ${{ github.ref_name }}
           GH_REPO: ${{ github.repository }}

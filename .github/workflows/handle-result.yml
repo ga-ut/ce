@@ -29,8 +29,12 @@ jobs:
               gh issue close "$ISSUE_NUMBER" --repo "$GH_REPO"
             fi
           elif [[ "$TOKEN" == "TASK_FAILED" ]]; then
-            gh pr comment "$PR" --repo "$GH_REPO" --body "Codex reported TASK_FAILED. Leaving the linked issue open for manual follow-up."
-            gh pr close "$PR" --repo "$GH_REPO"
+            if [[ -n "$ISSUE_NUMBER" ]]; then
+              gh pr comment "$PR" --repo "$GH_REPO" --body "Codex reported TASK_FAILED. Leaving the linked issue open for manual follow-up."
+              gh pr close "$PR" --repo "$GH_REPO"
+            else
+              gh pr comment "$PR" --repo "$GH_REPO" --body "Codex reported TASK_FAILED. Leaving this draft PR open for manual follow-up."
+            fi
           elif [[ "$TOKEN" == "TASK_DONE" ]]; then
             {
               printf '%s\n' '@codex verify this PR.' ''
