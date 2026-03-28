@@ -38,6 +38,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PERSONAL_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
 
       - run: |
           SOURCE_ISSUE_NUMBER="${INPUT_SOURCE_ISSUE_NUMBER:-${INPUT_ISSUE_NUMBER:-$EVENT_ISSUE_NUMBER}}"
@@ -67,14 +69,19 @@ jobs:
             git push origin :refs/heads/"$BRANCH"
           fi
           git checkout -B "$BRANCH" "origin/$BASE_BRANCH"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if GH_LOGIN=$(gh api user --jq '.login' 2>/dev/null) && GH_ID=$(gh api user --jq '.id' 2>/dev/null); then
+            git config user.name "$GH_LOGIN"
+            git config user.email "${GH_ID}+${GH_LOGIN}@users.noreply.github.com"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          fi
           git commit --allow-empty -m "chore(task): bootstrap $TASK_KEY"
           git push origin HEAD:refs/heads/"$BRANCH"
         env:
           EVENT_ISSUE_NUMBER: ${{ github.event.issue.number }}
           GH_REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           INPUT_ISSUE_NUMBER: ${{ inputs.issue_number }}
           INPUT_SOURCE_ISSUE_NUMBER: ${{ inputs.source_issue_number }}
           INPUT_TASK_KEY: ${{ inputs.task_key }}
@@ -169,7 +176,7 @@ jobs:
           EVENT_ISSUE_NUMBER: ${{ github.event.issue.number }}
           EVENT_ISSUE_TITLE: ${{ github.event.issue.title }}
           GH_REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           INPUT_ISSUE_NUMBER: ${{ inputs.issue_number }}
           INPUT_SOURCE_ISSUE_NUMBER: ${{ inputs.source_issue_number }}
           INPUT_TASK_BODY: ${{ inputs.task_body }}
