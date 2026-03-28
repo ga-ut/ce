@@ -43,7 +43,7 @@ jobs:
           DEFAULT_TASK_BODY: '{"goal":"Analyze repo and suggest improvements","acceptance":["no regressions","tests pass"]}'
           GH_REF: ${{ github.ref_name }}
           GH_REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           INPUT_TASK_BODY: ${{ inputs.task_body }}
           INPUT_TASK_KEY: ${{ inputs.task_key }}
           INPUT_TASK_TITLE: ${{ inputs.task_title }}

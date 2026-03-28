@@ -20,5 +20,5 @@ jobs:
           fi
         env:
           GH_REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           PR_BODY: ${{ github.event.pull_request.body }}

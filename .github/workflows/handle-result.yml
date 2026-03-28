@@ -21,7 +21,7 @@ jobs:
           BODY="$COMMENT_BODY"
           PR=${{ github.event.issue.number }}
           ISSUE_NUMBER=$(gh pr view "$PR" --repo "$GH_REPO" --json body --jq '.body' | sed -n 's/^<!-- SOURCE_ISSUE_ID=\([0-9][0-9]*\) -->$/\1/p' | head -n 1)
-          TOKEN=$(printf '%s\n' "$BODY" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+          TOKEN=$(printf '%s\n' "$BODY" | tr -d '\r' | sed -e '/^[[:space:]]*$/d' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | head -n 1)
 
           if [[ "$TOKEN" == "TASK_INVALID" ]]; then
             gh pr close "$PR" --repo "$GH_REPO"
@@ -37,9 +37,10 @@ jobs:
             fi
           elif [[ "$TOKEN" == "TASK_DONE" ]]; then
             {
-              printf '%s\n' '@codex verify this PR.' ''
-              printf '%s\n' 'If correct:' '- REVIEW_OK' '- merge this PR' '- delete branch' ''
-              printf '%s\n' 'If not:' '- explain issues'
+              printf '%s\n' '@codex review' ''
+              printf '%s\n' 'Re-review this PR against the task context in the PR body.' ''
+              printf '%s\n' 'If the PR is correct, leave one top-level comment whose first non-empty line is REVIEW_OK.' ''
+              printf '%s\n' 'If the PR is not correct, explain the remaining issues without using REVIEW_OK.'
             } > verify-comment.txt
 
             gh pr ready "$PR" --repo "$GH_REPO"
@@ -47,7 +48,7 @@ jobs:
           fi
         env:
           GH_REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           COMMENT_BODY: ${{ github.event.comment.body }}
           COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
           CODEX_LOGIN: ${{ vars.CODEX_LOGIN || 'openai-codex[bot]' }}

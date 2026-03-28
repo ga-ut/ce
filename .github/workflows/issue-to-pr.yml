@@ -38,6 +38,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PERSONAL_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
 
       - run: |
           SOURCE_ISSUE_NUMBER="${INPUT_SOURCE_ISSUE_NUMBER:-${INPUT_ISSUE_NUMBER:-$EVENT_ISSUE_NUMBER}}"
@@ -67,14 +69,19 @@ jobs:
             git push origin :refs/heads/"$BRANCH"
           fi
           git checkout -B "$BRANCH" "origin/$BASE_BRANCH"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if GH_LOGIN=$(gh api user --jq '.login' 2>/dev/null) && GH_ID=$(gh api user --jq '.id' 2>/dev/null); then
+            git config user.name "$GH_LOGIN"
+            git config user.email "${GH_ID}+${GH_LOGIN}@users.noreply.github.com"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          fi
           git commit --allow-empty -m "chore(task): bootstrap $TASK_KEY"
           git push origin HEAD:refs/heads/"$BRANCH"
         env:
           EVENT_ISSUE_NUMBER: ${{ github.event.issue.number }}
           GH_REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           INPUT_ISSUE_NUMBER: ${{ inputs.issue_number }}
           INPUT_SOURCE_ISSUE_NUMBER: ${{ inputs.source_issue_number }}
           INPUT_TASK_KEY: ${{ inputs.task_key }}
@@ -127,8 +134,19 @@ jobs:
               printf '<!-- SOURCE_ISSUE_ID=%s -->\n' "$SOURCE_ISSUE_NUMBER"
             fi
             printf '<!-- TASK_KEY=%s -->\n' "$TASK_KEY"
-            printf '%s\n' 'Task context:' ''
-            printf '%s\n' "$TASK_BODY"
+            printf '\n'
+            printf '%s\n' '## Task Context' ''
+            printf '%s\n' "$TASK_BODY" ''
+            printf '%s\n' '## Codex Instructions' ''
+            printf '%s\n' '- Read the task context before making changes.'
+            printf '%s\n' '- If the task is valid, implement it directly on this PR branch.'
+            printf '%s\n' '- Follow AGENTS.md validation gates that apply to the files you change.'
+            printf '%s\n' '- After implementation, leave exactly one top-level comment whose first non-empty line is TASK_DONE.'
+            printf '%s\n' '- If the task is invalid, leave exactly one top-level comment whose first non-empty line is TASK_INVALID, then explain why below it.'
+            printf '%s\n' '- If you are blocked or uncertain, leave exactly one top-level comment whose first non-empty line is TASK_FAILED, then explain why below it.' ''
+            printf '%s\n' '## Automation Notes' ''
+            printf '%s\n' '- Downstream workflows parse the first non-empty line of Codex comments as the state token.'
+            printf '%s\n' '- Valid state tokens are TASK_DONE, TASK_INVALID, TASK_FAILED, and REVIEW_OK.'
           } > pr-body.txt
 
           PR_URL=$(gh pr create \
@@ -142,11 +160,10 @@ jobs:
           PR_NUMBER="${PR_URL##*/}"
 
           {
-            printf '%s\n' '@codex' ''
-            printf '%s\n' 'Execute this task:' ''
-            printf '%s\n' "$TASK_BODY" ''
-            printf '%s\n' 'Rules:' '- valid -> implement' '- invalid -> TASK_INVALID' '- uncertain -> TASK_FAILED' ''
-            printf '%s\n' 'After:' '- TASK_DONE / TASK_INVALID / TASK_FAILED'
+            printf '%s\n' '@codex review' ''
+            printf '%s\n' 'Read the PR body for task context and execution instructions.' ''
+            printf '%s\n' 'If the task is valid, implement it on this PR branch.' ''
+            printf '%s\n' 'When you respond, make the first non-empty line exactly one of:' '- TASK_DONE' '- TASK_INVALID' '- TASK_FAILED'
           } > codex-comment.txt
 
           gh pr comment "$PR_NUMBER" --repo "$GH_REPO" --body-file codex-comment.txt
@@ -159,7 +176,7 @@ jobs:
           EVENT_ISSUE_NUMBER: ${{ github.event.issue.number }}
           EVENT_ISSUE_TITLE: ${{ github.event.issue.title }}
           GH_REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           INPUT_ISSUE_NUMBER: ${{ inputs.issue_number }}
           INPUT_SOURCE_ISSUE_NUMBER: ${{ inputs.source_issue_number }}
           INPUT_TASK_BODY: ${{ inputs.task_body }}
