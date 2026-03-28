@@ -4,6 +4,18 @@ on:
   push:
     branches:
       - main
+    paths:
+      - .github/workflows/pages.yml
+      - .bun-version
+      - bun.lock
+      - package.json
+      - tsconfig.json
+      - tsconfig.base.json
+      - docs/site/**
+      - docs/data/**
+      - apps/playground/**
+      - packages/ce/src/**
+      - packages/ce/tsconfig.json
   workflow_dispatch:
 
 permissions:
