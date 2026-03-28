@@ -19,7 +19,7 @@ jobs:
             exit 0
           fi
 
-          TOKEN=$(printf '%s\n' "$COMMENT_BODY" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+          TOKEN=$(printf '%s\n' "$COMMENT_BODY" | tr -d '\r' | sed -e '/^[[:space:]]*$/d' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | head -n 1)
           if [[ "$TOKEN" != "REVIEW_OK" ]]; then
             exit 0
           fi
