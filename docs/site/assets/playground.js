@@ -1,9 +1,11 @@
 const ROADMAP_JSON_PATH_CANDIDATES = ['./data/roadmap.json', '../data/roadmap.json'];
-// Prefer the web entrypoint; keep root candidates as temporary compatibility fallback.
+// Prefer the canonical workspace build output first; keep root dist paths as compatibility bridges.
 const DIST_MODULE_PATH_CANDIDATES = [
+  '../../packages/ce/dist/web/index.mjs',
   './dist/web/index.mjs',
   '../dist/web/index.mjs',
   '../../dist/web/index.mjs',
+  '../../packages/ce/dist/index.mjs',
   './dist/index.mjs',
   '../dist/index.mjs',
   '../../dist/index.mjs',

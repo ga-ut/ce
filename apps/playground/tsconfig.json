@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@ga-ut/ce": ["../../packages/ce/src/index.ts"],
+      "@ga-ut/ce/web": ["../../packages/ce/src/web/index.ts"],
+      "@ga-ut/ce/core": ["../../packages/ce/src/core/index.ts"]
+    }
+  },
+  "include": ["App.ts"]
+}

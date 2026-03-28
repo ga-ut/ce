@@ -1,3 +1,7 @@
 **/node_modules
 ce.js
 dist
+packages/*/dist
+apps/*/dist
+**/.npm-pack-cache
+.acj

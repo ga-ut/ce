@@ -49,7 +49,7 @@ test.before(async () => {
   const outfile = path.join(workspace, "ce.bundle.mjs");
 
   await build({
-    entryPoints: [path.resolve("src/web/index.ts")],
+    entryPoints: [path.resolve("packages/ce/src/web/index.ts")],
     outfile,
     bundle: true,
     format: "esm",

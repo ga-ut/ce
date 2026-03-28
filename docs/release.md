@@ -5,15 +5,15 @@
 - Suggested workflow included at `.github/workflows/release-check.yml`.
 
 ## Pre-publish verification
-1. `npm ci`
+1. `bun install`
 2. `npm run lint`
 3. `npm run test`
 4. `npm run build`
-5. `npm run pack:check` (`npm pack --dry-run`)
+5. `npm run pack:check` (`packages/ce` workspace `npm pack --dry-run`)
 6. Confirm the document status board data was refreshed (or explicitly marked as no-change) for this release.
 
 ## Publish
-- Public package: `npm publish --access public`
+- Public package: `cd packages/ce && npm publish --access public`
 - Organization/private policy can override access mode.
 
 ## Release notes
