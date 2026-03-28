@@ -1,4 +1,4 @@
-import { CE, html } from "@ga-ut/ce/web";
+import { CE, html } from "../../packages/ce/src/web";
 
 const createCountState = () => ({
   count: 0,
