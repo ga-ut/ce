@@ -16,8 +16,9 @@ jobs:
       - run: |
           NUM=$(printf '%s\n' "$PR_BODY" | sed -n 's/^<!-- SOURCE_ISSUE_ID=\([0-9][0-9]*\) -->$/\1/p' | head -n 1)
           if [[ -n "$NUM" ]]; then
-            gh issue close "$NUM"
+            gh issue close "$NUM" --repo "$GH_REPO"
           fi
         env:
+          GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_BODY: ${{ github.event.pull_request.body }}

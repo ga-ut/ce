@@ -3,25 +3,68 @@ name: issue-to-draft-pr
 on:
   issues:
     types: [opened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Issue number to convert into a draft PR
+        required: true
+        type: string
 
 permissions:
+  actions: write
   contents: write
+  issues: read
   pull-requests: write
 
 jobs:
   create-pr:
+    if: github.event_name == 'workflow_dispatch' || (startsWith(github.event.issue.title, '[TASK]') && github.event.issue.user.login != 'github-actions[bot]')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - run: |
-          BRANCH=task-${{ github.event.issue.number }}
-          git checkout -b "$BRANCH"
+          ISSUE_NUMBER="${INPUT_ISSUE_NUMBER:-$EVENT_ISSUE_NUMBER}"
+          BASE_BRANCH=$(gh repo view --repo "$GH_REPO" --json defaultBranchRef --jq '.defaultBranchRef.name')
+          BRANCH="task-$ISSUE_NUMBER"
+
+          if [[ "$(gh pr list --repo "$GH_REPO" --head "$BRANCH" --json number --jq 'length')" != "0" ]]; then
+            echo "PR already exists for $BRANCH; skipping."
+            exit 0
+          fi
+
+          git fetch origin "$BASE_BRANCH"
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            git push origin :refs/heads/"$BRANCH"
+          fi
+          git checkout -B "$BRANCH" "origin/$BASE_BRANCH"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "chore(task): bootstrap issue $ISSUE_NUMBER"
           git push origin HEAD:refs/heads/"$BRANCH"
+        env:
+          EVENT_ISSUE_NUMBER: ${{ github.event.issue.number }}
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_ISSUE_NUMBER: ${{ inputs.issue_number }}
 
       - run: |
+          ISSUE_NUMBER="${INPUT_ISSUE_NUMBER:-$EVENT_ISSUE_NUMBER}"
+          ISSUE_BODY="$EVENT_ISSUE_BODY"
+          BRANCH="task-$ISSUE_NUMBER"
+          BASE_BRANCH=$(gh repo view --repo "$GH_REPO" --json defaultBranchRef --jq '.defaultBranchRef.name')
+
+          if [[ "$(gh pr list --repo "$GH_REPO" --head "$BRANCH" --json number --jq 'length')" != "0" ]]; then
+            echo "PR already exists for $BRANCH; skipping."
+            exit 0
+          fi
+
+          if [[ -z "$ISSUE_BODY" ]]; then
+            ISSUE_BODY=$(gh issue view "$ISSUE_NUMBER" --repo "$GH_REPO" --json body --jq '.body')
+          fi
+
           {
-            printf '<!-- SOURCE_ISSUE_ID=%s -->\n' "${{ github.event.issue.number }}"
+            printf '<!-- SOURCE_ISSUE_ID=%s -->\n' "$ISSUE_NUMBER"
             printf '%s\n' '@codex' '' 'Execute this task:' ''
             printf '%s\n' "$ISSUE_BODY" ''
             printf '%s\n' 'Rules:' '- valid -> implement' '- invalid -> TASK_INVALID' '- uncertain -> TASK_FAILED' ''
@@ -29,11 +72,19 @@ jobs:
           } > pr-body.txt
 
           gh pr create \
-            --title "Task #${{ github.event.issue.number }}" \
+            --repo "$GH_REPO" \
+            --title "Task #$ISSUE_NUMBER" \
             --body-file pr-body.txt \
             --draft \
-            --base main \
-            --head task-${{ github.event.issue.number }}
+            --base "$BASE_BRANCH" \
+            --head "$BRANCH"
+
+          gh workflow run release-check.yml \
+            --repo "$GH_REPO" \
+            --ref "$BRANCH"
         env:
+          EVENT_ISSUE_BODY: ${{ github.event.issue.body }}
+          EVENT_ISSUE_NUMBER: ${{ github.event.issue.number }}
+          GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ISSUE_BODY: ${{ github.event.issue.body }}
+          INPUT_ISSUE_NUMBER: ${{ inputs.issue_number }}
