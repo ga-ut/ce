@@ -10,12 +10,14 @@ const repoRoot =
 const playgroundScriptPath = path.join(repoRoot, 'docs/site/assets/playground.js');
 
 const expectedWebCandidates = [
+  '../../packages/ce/dist/web/index.mjs',
   './dist/web/index.mjs',
   '../dist/web/index.mjs',
   '../../dist/web/index.mjs',
 ];
 
 const expectedRootFallbackCandidates = [
+  '../../packages/ce/dist/index.mjs',
   './dist/index.mjs',
   '../dist/index.mjs',
   '../../dist/index.mjs',

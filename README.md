@@ -1,6 +1,23 @@
 # CE
 Custom Element library.
 
+## Repository Layout
+- Root: private Bun workspace orchestrator, docs, tests, and CI/workflow files
+- `packages/ce`: publishable `@ga-ut/ce` library package
+- `apps/playground`: demo app workspace that owns the former root `App.ts`
+
+## Workspace Setup
+```bash
+bun install
+```
+
+## Playground Preview
+```bash
+bun run preview:playground
+```
+
+Default URL: `http://127.0.0.1:4173`
+
 ## Usage (Web)
 ```ts
 import { CE, html } from "@ga-ut/ce/web";
@@ -10,7 +27,9 @@ import { CE, html } from "@ga-ut/ce/web";
 Detailed signatures and compatibility policy are documented in [`docs/api.md`](./docs/api.md).
 
 ## Packaging
-- Entry points: `src/index.ts` (core), `src/core/index.ts`, `src/web/index.ts`
+- Publishable package: `packages/ce`
+- Source entry points: `packages/ce/src/index.ts`, `packages/ce/src/core/index.ts`, `packages/ce/src/web/index.ts`
+- Canonical outputs: `packages/ce/dist` (mirrored to root `dist` during root builds for docs/Pages compatibility)
 - Outputs: ESM + CJS + type declarations via `tsup`
 
 ## Breaking change (v2.0.0)
@@ -21,6 +40,9 @@ Detailed signatures and compatibility policy are documented in [`docs/api.md`](.
   - `import { CE, html } from "@ga-ut/ce/web";`
 
 ## Quality gates
+- `bun run lint`
+- `bun run test`
+- `bun run build`
 - `npm run lint`
 - `npm run test` (runtime tests)
 - `npm run docs:validate` (docs JSON fields + internal link integrity)
@@ -44,8 +66,8 @@ Release/rollback/smoke-test checklist is documented in [`docs/release.md`](./doc
 
 ## Library distribution
 - Playground deployment (GitHub Pages) and library distribution (npm) are separate.
-- Users consume the package via `npm i @ga-ut/ce` after npm publish.
-- This repository includes `.github/workflows/npm-publish.yml`, which publishes on GitHub Release (`v*` tags) when `NPM_TOKEN` is configured.
+- Users consume the package via `npm i @ga-ut/ce` or `bun add @ga-ut/ce` after publish.
+- This repository includes `.github/workflows/npm-publish.yml`, which validates from the Bun workspace root and publishes the `packages/ce` workspace on GitHub Release (`v*` tags) when `NPM_TOKEN` is configured.
 
 ## Docs Playground
 - `docs/site/playground.html` includes an **Active Work** board sourced from `docs/data/roadmap.json`.

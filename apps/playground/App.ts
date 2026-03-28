@@ -1,4 +1,4 @@
-import { CE, html } from "@/ce";
+import { CE, html } from "../../packages/ce/src/web";
 
 const createCountState = () => ({
   count: 0,
@@ -10,6 +10,7 @@ const createUserState = () => ({
 
 CE.define({
   name: "counter-button-group",
+  state: {},
   render() {
     return html` <div>
       <button increment="click">+</button>
@@ -55,7 +56,7 @@ CE.define({
   render() {
     return html`
       <nav>
-        <button to-users="click">View users</button>
+        <button toUsers="click">View users</button>
       </nav>
       <div count>Count: ${this.bind("count")} times</div>
       <counter-button-group
@@ -72,7 +73,7 @@ CE.define({
       this.setState({ count: this.state.count - 1 });
     },
     toUsers() {
-      CE.navigate("/users");
+      CE.navigate("#/users");
     },
   },
 });
@@ -84,14 +85,40 @@ CE.define({
   render() {
     return html`
       <nav>
-        <button to-home="click">Back to home</button>
+        <button toHome="click">Back to home</button>
       </nav>
       <user-info></user-info>
     `;
   },
   handlers: {
     toHome() {
-      CE.navigate("/");
+      CE.navigate("#/");
     },
   },
 });
+
+const mountApp = () => {
+  const existingRoot = document.querySelector<HTMLElement>("[data-ce-playground-root]");
+  const root = existingRoot ?? document.createElement("div");
+
+  root.dataset.cePlaygroundRoot = "true";
+
+  if (!existingRoot) {
+    document.body.append(root);
+  }
+
+  if (!window.location.hash) {
+    window.location.hash = "#/";
+  }
+
+  CE.setEntryPoint("ce-playground-root", {
+    rootElement: root,
+    hydrate: false,
+  });
+};
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", mountApp, { once: true });
+} else {
+  mountApp();
+}

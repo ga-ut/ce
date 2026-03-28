@@ -1,0 +1,11 @@
+{
+  "name": "@ga-ut/ce-playground",
+  "private": true,
+  "scripts": {
+    "build": "bun build ./App.ts --outfile ./dist/app.js --target browser",
+    "preview": "bun run ./dev-server.mjs"
+  },
+  "dependencies": {
+    "@ga-ut/ce": "workspace:*"
+  }
+}
