@@ -3,30 +3,47 @@ name: scheduler
 on:
   schedule:
     - cron: "0 * * * *"
+  workflow_dispatch:
+    inputs:
+      task_key:
+        description: Stable task key used to name the branch and de-duplicate PRs
+        required: false
+        type: string
+        default: periodic-review
+      task_title:
+        description: Task title / draft PR title
+        required: false
+        type: string
+        default: Scheduled task: periodic review
+      task_body:
+        description: Task body passed to Codex
+        required: false
+        type: string
+        default: '{"goal":"Analyze repo and suggest improvements","acceptance":["no regressions","tests pass"]}'
 
 permissions:
   actions: write
-  issues: write
 
 jobs:
-  create-issue:
+  create-pr:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          ISSUE_URL=$(gh issue create \
-            --repo "$GH_REPO" \
-            --title "[TASK] periodic review" \
-            --body '{
-              "goal": "Analyze repo and suggest improvements",
-              "acceptance": ["no regressions", "tests pass"]
-            }')
-          ISSUE_NUMBER="${ISSUE_URL##*/}"
+          TASK_KEY_VALUE="${INPUT_TASK_KEY:-periodic-review}"
+          TASK_TITLE_VALUE="${INPUT_TASK_TITLE:-Scheduled task: periodic review}"
+          TASK_BODY_VALUE="${INPUT_TASK_BODY:-$DEFAULT_TASK_BODY}"
 
           gh workflow run issue-to-pr.yml \
             --repo "$GH_REPO" \
             --ref "$GH_REF" \
-            -f issue_number="$ISSUE_NUMBER"
+            -f task_key="$TASK_KEY_VALUE" \
+            -f task_title="$TASK_TITLE_VALUE" \
+            -f task_body="$TASK_BODY_VALUE"
         env:
+          DEFAULT_TASK_BODY: '{"goal":"Analyze repo and suggest improvements","acceptance":["no regressions","tests pass"]}'
           GH_REF: ${{ github.ref_name }}
           GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_TASK_BODY: ${{ inputs.task_body }}
+          INPUT_TASK_KEY: ${{ inputs.task_key }}
+          INPUT_TASK_TITLE: ${{ inputs.task_title }}
