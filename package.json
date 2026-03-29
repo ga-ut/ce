@@ -19,7 +19,7 @@
     "verify:full": "npm run verify && npm run test:events && npm run docs:validate && npm run pack:check"
   },
   "devDependencies": {
-    "esbuild": "^0.23.0",
+    "esbuild": "^0.25.0",
     "jsdom": "^25.0.1",
     "tsup": "^8.2.4",
     "typescript": "^5.6.3",
