@@ -338,16 +338,23 @@ export class CE {
       setState(newState: Partial<T>) {
         this._state = { ...this._state, ...newState };
 
+        let needsRender = false;
+
         for (const key of Object.keys(newState) as (keyof T)[]) {
           const nodes = this.bindingMap.get(String(key));
-          if (!nodes) continue;
+          if (!nodes || nodes.size === 0) {
+            needsRender = true;
+            continue;
+          }
 
           for (const node of Array.from(nodes)) {
             node.textContent = String(this._state[key] ?? "");
           }
         }
 
-        void this.renderComponent();
+        if (needsRender) {
+          void this.renderComponent();
+        }
       }
 
       private indexBindings() {

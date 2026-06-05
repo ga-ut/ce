@@ -64,6 +64,61 @@ describe("CE library", () => {
     expect(el.shadowRoot?.querySelector("#label")?.textContent).toContain("A");
   });
 
+  it("patches bound state without rerunning render", async () => {
+    let renderCount = 0;
+
+    CE.define({
+      name: "x-fine-grained-text",
+      state: { count: 0 },
+      render() {
+        renderCount += 1;
+        return html`<button update="click">${this.bind("count")}</button>`;
+      },
+      handlers: {
+        update() {
+          this.setState({ count: this.state.count + 1 });
+        },
+      },
+    });
+
+    const el = document.createElement("x-fine-grained-text") as HTMLElement;
+    document.body.append(el);
+
+    const button = el.shadowRoot?.querySelector("button") as HTMLButtonElement;
+    button.click();
+    await wait();
+
+    expect(el.shadowRoot?.textContent?.trim()).toBe("1");
+    expect(renderCount).toBe(1);
+  });
+
+  it("rerenders when changed state has no binding target", async () => {
+    CE.define({
+      name: "x-unbound-rerender",
+      state: { open: false },
+      render() {
+        return html`
+          <button toggle="click">toggle</button>
+          ${this.state.open ? "<section>open</section>" : ""}
+        `;
+      },
+      handlers: {
+        toggle() {
+          this.setState({ open: true });
+        },
+      },
+    });
+
+    const el = document.createElement("x-unbound-rerender") as HTMLElement;
+    document.body.append(el);
+
+    const button = el.shadowRoot?.querySelector("button") as HTMLButtonElement;
+    button.click();
+    await wait();
+
+    expect(el.shadowRoot?.querySelector("section")?.textContent).toBe("open");
+  });
+
   it("does not duplicate event handlers after rerender", async () => {
     CE.define({
       name: "x-handler-dedupe",

@@ -1,5 +1,3 @@
-const TASK_A_JSON_PATH = './data/roadmap.json';
-
 const NAV_ITEMS = [
   { href: 'index.html', label: 'Overview', key: 'index' },
   { href: 'components.html', label: 'Components', key: 'components' },
@@ -37,41 +35,9 @@ function mountShell() {
     footer.className = 'site-footer';
     footer.innerHTML = `
       <p>References: <a href="https://github.com/ga-ut/ce/blob/main/docs/api.md">docs/api.md</a> · <a href="https://github.com/ga-ut/ce/blob/main/docs/release.md">docs/release.md</a></p>
-      <p>Task A data source: <code>${TASK_A_JSON_PATH}</code></p>
     `;
     shell.appendChild(footer);
   }
 }
 
-async function renderTaskAStatus() {
-  const targets = document.querySelectorAll('[data-task-a-status]');
-  if (!targets.length) {
-    return;
-  }
-
-  try {
-    const response = await fetch(TASK_A_JSON_PATH, { headers: { accept: 'application/json' } });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const payload = await response.json();
-    const keys = payload && typeof payload === 'object' ? Object.keys(payload) : [];
-    const message = keys.length
-      ? `Task A JSON loaded successfully (${keys.length} top-level keys).`
-      : 'Task A JSON loaded successfully.';
-
-    for (const el of targets) {
-      el.textContent = message;
-      el.classList.add('status--ok');
-    }
-  } catch (error) {
-    for (const el of targets) {
-      el.textContent = `Task A JSON is unavailable at ${TASK_A_JSON_PATH}. (${String(error)})`;
-      el.classList.add('status--error');
-    }
-  }
-}
-
 mountShell();
-void renderTaskAStatus();
