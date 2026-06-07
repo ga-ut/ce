@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CE Docs Site | Release</title>
+    <link rel="stylesheet" href="assets/styles.css?v=20260607-ce-doc-pages" />
+    <script type="module" src="assets/app.js?v=20260607-ce-doc-shell"></script>
+  </head>
+  <body data-page="release">
+    <main>
+      <section class="card doc-page">
+        <h2>Release, Verification, and Rollback</h2>
+
+        <h3>CI gate</h3>
+        <p>Tag a release only when <code>lint + test + build</code> pass.</p>
+
+        <h3>Pre-publish verification</h3>
+        <ol>
+          <li><code>bun install</code></li>
+          <li><code>npm run lint</code></li>
+          <li><code>npm run test</code></li>
+          <li><code>npm run build</code></li>
+          <li><code>npm run pack:check</code></li>
+          <li>Confirm the document status board data was refreshed or explicitly marked as no-change.</li>
+        </ol>
+
+        <h3>Publish</h3>
+        <p>Publish from <code>packages/ce</code> with <code>npm publish --access public</code>. Organization policy can override access mode.</p>
+
+        <h3>Release notes</h3>
+        <ul>
+          <li>Breaking changes</li>
+          <li>Migration guide</li>
+          <li>Affected API list</li>
+        </ul>
+
+        <h4>Migration checklist for v2.0.0</h4>
+        <ol>
+          <li>Replace all root imports with <code>@ga-ut/ce/web</code> for web runtime APIs.</li>
+          <li>Confirm consumers no longer import <code>CE</code> or <code>html</code> from the package root.</li>
+          <li>Run validation gates in this repository before publish.</li>
+        </ol>
+
+        <h3>Post-release smoke test</h3>
+        <ul>
+          <li>Route transitions</li>
+          <li>State updates</li>
+          <li>Event handling</li>
+          <li>Published Pages status board timestamp</li>
+        </ul>
+
+        <h3>Rollback safety</h3>
+        <p>If an issue is found, publish an immediate patch release with the fix and keep the rollback playbook in the release PR.</p>
+      </section>
+    </main>
+  </body>
+</html>

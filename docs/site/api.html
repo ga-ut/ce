@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CE Docs Site | API</title>
+    <link rel="stylesheet" href="assets/styles.css?v=20260607-ce-doc-pages" />
+    <script type="module" src="assets/app.js?v=20260607-ce-doc-shell"></script>
+  </head>
+  <body data-page="api">
+    <main>
+      <section class="card doc-page">
+        <h2>CE Public API</h2>
+        <p>Public web runtime APIs are imported as named functions from the web entrypoint.</p>
+
+        <h3>Import paths</h3>
+        <pre><code>import { define, html, signal, derived, effect, match } from "@ga-ut/ce/web";
+import * as core from "@ga-ut/ce";
+import * as coreOnly from "@ga-ut/ce/core";</code></pre>
+
+        <h3>Breaking change in v2.0.0</h3>
+        <pre><code>// Before
+import { CE, html } from "@ga-ut/ce/web";
+
+// After
+import { define, html, signal, derived } from "@ga-ut/ce/web";</code></pre>
+
+        <h3>Stable API</h3>
+        <h4>define(component, options?)</h4>
+        <pre><code>define(function MyCounter({ props, lifecycle }) {
+  const count = signal(props.initial ?? 0);
+  const doubled = derived(() =&gt; count() * 2);
+
+  lifecycle.cleanup(() =&gt; {
+    // clear timers, listeners, or requests here
+  });
+
+  return html`
+    &lt;button onclick=${() =&gt; count.update((value) =&gt; value + 1)}&gt;
+      ${count} / ${doubled}
+    &lt;/button&gt;
+  `;
+}, {
+  props: {
+    initial: Number
+  }
+});</code></pre>
+        <ul>
+          <li>The function name becomes the custom element tag name: <code>MyCounter</code> registers <code>my-counter</code>.</li>
+          <li><code>props</code> are parsed from attributes and tracked reactively.</li>
+          <li><code>lifecycle.cleanup</code> runs when the element disconnects.</li>
+        </ul>
+
+        <h4>setEntryPoint(entryPoint: string)</h4>
+        <p>Sets the router mount element. CE reuses an existing matching element or creates one.</p>
+
+        <h4>navigate(path: string)</h4>
+        <p>Supports history paths such as <code>/users</code> and hash paths such as <code>#/users</code>, then renders the route immediately.</p>
+
+        <h4>html(strings, ...values)</h4>
+        <pre><code>html`
+  &lt;p&gt;${signalValue}&lt;/p&gt;
+  &lt;button onclick=${handler}&gt;Save&lt;/button&gt;
+`</code></pre>
+        <p>Template helper. Signals patch their text or attribute position without rerunning the whole render path.</p>
+
+        <h3>Router placement decision</h3>
+        <p>The router remains bundled but optional. It is used only when <code>route</code>, <code>setEntryPoint</code>, or <code>navigate</code> are used.</p>
+
+        <h3>SemVer policy</h3>
+        <ul>
+          <li><strong>MAJOR:</strong> signature changes, state lifecycle behavior changes, or routing contract changes.</li>
+          <li><strong>MINOR:</strong> new optional params and non-breaking helpers.</li>
+          <li><strong>PATCH:</strong> bug fixes and performance improvements with the same public contract.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

@@ -38,10 +38,10 @@ const PLAYGROUND_PRESETS = {
     source: {
       html: `<ce-counter></ce-counter>`,
       css: `body {\n  margin: 0;\n  padding: 1rem;\n  font-family: Inter, system-ui, sans-serif;\n  background: #f8fafc;\n}\n\n.note {\n  color: #4b5563;\n  font-size: 0.9rem;\n}`,
-      js: `(async () => {\n  const { CE, html } = window.__PLAYGROUND_CE_RUNTIME__ ?? {};
-  if (!(CE && html)) {
+      js: `(async () => {\n  const { define, html, signal } = window.__PLAYGROUND_CE_API__ ?? {};
+  if (!(define && html && signal)) {
     throw new Error('CE runtime is unavailable in playground preview.');
-  }\n\n  CE.define({\n    name: 'ce-counter',\n    state: { count: 0 },\n    render() {\n      return html\`\n        <style>\n          .card {\n            background: #fff;\n            border: 1px solid #e5e7eb;\n            border-radius: 12px;\n            padding: 1rem;\n            display: grid;\n            gap: 0.6rem;\n          }\n\n          button {\n            width: fit-content;\n            border: 1px solid #2563eb;\n            background: #2563eb;\n            color: #fff;\n            border-radius: 8px;\n            padding: 0.45rem 0.75rem;\n            cursor: pointer;\n          }\n\n          .count {\n            font-weight: 700;\n            color: #1f2937;\n          }\n        </style>\n        <section class="card">\n          <h2>CE Counter (Shadow DOM)</h2>\n          <p>Count: <span class="count">\${this.bind('count')}</span></p>\n          <button onIncrement="click" type="button">Increment</button>\n          <p class="note">이 스타일은 커스텀 엘리먼트의 shadowRoot 내부에 격리되어 렌더링됩니다.</p>\n        </section>\n      \`;\n    },\n    handlers: {\n      onIncrement() {\n        this.setState({ count: this.state.count + 1 });\n      },\n    },\n  });\n})();`,
+  }\n\n  define(function CeCounter() {\n    const count = signal(0);\n\n    return html\`\n      <style>\n        .card {\n          background: #fff;\n          border: 1px solid #e5e7eb;\n          border-radius: 12px;\n          padding: 1rem;\n          display: grid;\n          gap: 0.6rem;\n        }\n\n        button {\n          width: fit-content;\n          border: 1px solid #2563eb;\n          background: #2563eb;\n          color: #fff;\n          border-radius: 8px;\n          padding: 0.45rem 0.75rem;\n          cursor: pointer;\n        }\n\n        .count {\n          font-weight: 700;\n          color: #1f2937;\n        }\n      </style>\n      <section class="card">\n        <h2>CE Counter (Shadow DOM)</h2>\n        <p>Count: <span class="count">\${count}</span></p>\n        <button onclick=\${() => count.update((value) => value + 1)} type="button">Increment</button>\n        <p class="note">함수 이름 CeCounter가 ce-counter 태그로 등록됩니다.</p>\n      </section>\n    \`;\n  });\n})();`,
     },
   },
   fine: {
@@ -66,48 +66,43 @@ const PLAYGROUND_PRESETS = {
   max-width: 680px;
 }`,
       js: `(async () => {
-  const { CE, html } = window.__PLAYGROUND_CE_RUNTIME__ ?? {};
-  if (!(CE && html)) {
+  const { define, html, signal, derived } = window.__PLAYGROUND_CE_API__ ?? {};
+  if (!(define && html && signal && derived)) {
     throw new Error('CE runtime is unavailable in playground preview.');
   }
 
-  const renderCounts = new WeakMap();
+  define(function CeCounter({ props, lifecycle }) {
+    const count = signal(props.initial ?? 0);
+    const patched = signal(false);
+    const valueClass = derived(() => patched() ? 'value is-patched' : 'value');
+    const step = () => props.step ?? 1;
+    let flashTimer = 0;
+    let flashFrame = 0;
+    let calls = 0;
 
-  CE.define({
-    name: 'ce-counter',
-    state: {
-      label: 'Counter',
-      count: 0,
-    },
-    onConnect() {
-      const initial = Number(this.getAttribute('initial') ?? 0);
+    function bump(delta) {
+      count.update((value) => value + delta);
 
-      this.setState({
-        label: this.getAttribute('label') ?? 'Counter',
-        count: Number.isFinite(initial) ? initial : 0,
+      patched.set(false);
+      clearTimeout(flashTimer);
+      cancelAnimationFrame(flashFrame);
+
+      flashFrame = requestAnimationFrame(() => {
+        flashFrame = requestAnimationFrame(() => {
+          patched.set(true);
+          flashTimer = setTimeout(() => patched.set(false), 520);
+        });
       });
+    }
 
-      const value = this.shadowRoot?.querySelector('.value');
-      const boundValue = value?.querySelector('[data-ce-bind]');
-      if (!(value && boundValue)) return;
+    lifecycle.cleanup(() => {
+      clearTimeout(flashTimer);
+      cancelAnimationFrame(flashFrame);
+    });
 
-      const flash = () => {
-        value.classList.remove('is-patched');
-        void value.getBoundingClientRect();
-        value.classList.add('is-patched');
-      };
+    calls += 1;
 
-      new MutationObserver(flash).observe(boundValue, {
-        characterData: true,
-        childList: true,
-        subtree: true,
-      });
-    },
-    render() {
-      const calls = (renderCounts.get(this) ?? 0) + 1;
-      renderCounts.set(this, calls);
-
-      return html\`
+    return html\`
         <style>
           :host {
             display: block;
@@ -165,7 +160,7 @@ const PLAYGROUND_PRESETS = {
             font: inherit;
           }
 
-          button[decrement] {
+          button:first-child {
             background: #fff;
             color: #172033;
             border-color: #c9d1dc;
@@ -192,28 +187,23 @@ const PLAYGROUND_PRESETS = {
 
         <section class="counter">
           <div>
-            <strong>\${this.bind('label')}</strong>
-            <div class="meta">render calls: \${calls} · highlighted value is patched</div>
+            <strong>\${props.label ?? 'Counter'}</strong>
+            <div class="meta">render calls: \${calls} · signal patch, no rerender</div>
           </div>
           <div>
-            <div class="value">\${this.bind('count')}</div>
+            <div class="\${valueClass}">\${count}</div>
             <div class="controls">
-              <button decrement="click" type="button" aria-label="decrement">-</button>
-              <button increment="click" type="button" aria-label="increment">+</button>
+              <button onclick=\${() => bump(-step())} type="button" aria-label="decrement">-</button>
+              <button onclick=\${() => bump(step())} type="button" aria-label="increment">+</button>
             </div>
           </div>
         </section>
       \`;
-    },
-    handlers: {
-      increment() {
-        const step = Number(this.getAttribute('step') ?? 1);
-        this.setState({ count: this.state.count + (Number.isFinite(step) ? step : 1) });
-      },
-      decrement() {
-        const step = Number(this.getAttribute('step') ?? 1);
-        this.setState({ count: this.state.count - (Number.isFinite(step) ? step : 1) });
-      },
+  }, {
+    props: {
+      label: String,
+      initial: Number,
+      step: Number,
     },
   });
 })();`,
@@ -231,18 +221,24 @@ const PLAYGROUND_PRESETS = {
   color: #172033;
 }`,
       js: `(async () => {
-  const { CE, html } = window.__PLAYGROUND_CE_RUNTIME__ ?? {};
-  if (!(CE && html)) {
+  const { define, html, signal } = window.__PLAYGROUND_CE_API__ ?? {};
+  if (!(define && html && signal)) {
     throw new Error('CE runtime is unavailable in playground preview.');
   }
 
-  CE.define({
-    name: 'ce-todo-list',
-    state: {
-      items: ['Review fine-grained patch', 'Ship docs playground'],
-    },
-    render() {
-      return html\`
+  define(function CeTodoList({ host }) {
+    const items = signal(['Review fine-grained patch', 'Ship docs playground']);
+
+    function addItem() {
+      const input = host.shadowRoot?.querySelector('input');
+      const value = input?.value.trim();
+      if (!value) return;
+
+      items().push(value);
+      input.value = '';
+    }
+
+    return () => html\`
         <style>
           .todo {
             display: grid;
@@ -295,24 +291,13 @@ const PLAYGROUND_PRESETS = {
           <h2>Todo list</h2>
           <div class="composer">
             <input name="item" placeholder="New task" autocomplete="off" />
-            <button addItem="click" type="button">Add</button>
+            <button onclick=\${addItem} type="button">Add</button>
           </div>
           <ul>
-            \${this.state.items.map((item) => html\`<li>\${item}</li>\`).join('')}
+            \${items().map((item) => html\`<li>\${item}</li>\`)}
           </ul>
         </section>
       \`;
-    },
-    handlers: {
-      addItem() {
-        const input = this.shadowRoot?.querySelector('input');
-        const value = input?.value.trim();
-        if (!value) return;
-
-        this.setState({ items: [...this.state.items, value] });
-        input.value = '';
-      },
-    },
   });
 })();`,
     },
@@ -339,29 +324,21 @@ const PLAYGROUND_PRESETS = {
   gap: 0.75rem;
 }`,
       js: `(async () => {
-  const { CE, html } = window.__PLAYGROUND_CE_RUNTIME__ ?? {};
-  if (!(CE && html)) {
+  const { define, html, signal } = window.__PLAYGROUND_CE_API__ ?? {};
+  if (!(define && html && signal)) {
     throw new Error('CE runtime is unavailable in playground preview.');
   }
 
-  CE.define({
-    name: 'ce-product-card',
-    state: {
-      name: 'Product',
-      price: '$0',
-      stock: 0,
-      selected: 0,
-    },
-    onConnect() {
-      const stock = Number(this.getAttribute('stock') ?? 0);
-      this.setState({
-        name: this.getAttribute('name') ?? 'Product',
-        price: this.getAttribute('price') ?? '$0',
-        stock: Number.isFinite(stock) ? stock : 0,
-      });
-    },
-    render() {
-      return html\`
+  define(function CeProductCard({ props }) {
+    const selected = signal(0);
+    const stock = props.stock ?? 0;
+
+    function add() {
+      if (selected() >= stock) return;
+      selected.update((value) => value + 1);
+    }
+
+    return html\`
         <style>
           .product {
             display: grid;
@@ -399,19 +376,18 @@ const PLAYGROUND_PRESETS = {
         </style>
 
         <article class="product">
-          <h2>\${this.bind('name')}</h2>
-          <div class="price">\${this.bind('price')}</div>
-          <div class="meta">Stock: \${this.bind('stock')}</div>
-          <div class="meta">Selected: \${this.bind('selected')}</div>
-          <button add="click" type="button">Add one</button>
+          <h2>\${props.name ?? 'Product'}</h2>
+          <div class="price">\${props.price ?? '$0'}</div>
+          <div class="meta">Stock: \${stock}</div>
+          <div class="meta">Selected: \${selected}</div>
+          <button onclick=\${add} type="button">Add one</button>
         </article>
       \`;
-    },
-    handlers: {
-      add() {
-        if (this.state.selected >= this.state.stock) return;
-        this.setState({ selected: this.state.selected + 1 });
-      },
+  }, {
+    props: {
+      name: String,
+      price: String,
+      stock: Number,
     },
   });
 })();`,
@@ -429,25 +405,25 @@ const PLAYGROUND_PRESETS = {
   color: #172033;
 }`,
       js: `(async () => {
-  const { CE, html } = window.__PLAYGROUND_CE_RUNTIME__ ?? {};
-  if (!(CE && html)) {
+  const { define, html, signal, derived } = window.__PLAYGROUND_CE_API__ ?? {};
+  if (!(define && html && signal && derived)) {
     throw new Error('CE runtime is unavailable in playground preview.');
   }
 
   const copy = {
     summary: 'A compact custom element with local state and scoped styles.',
-    usage: 'Use attributes for setup and handlers for local interactions.',
+    usage: 'Use attributes for setup and direct state assignment for local interactions.',
     release: 'Keep public entrypoints stable and validate before publishing.',
   };
 
-  CE.define({
-    name: 'ce-profile-tabs',
-    state: {
-      active: 'summary',
-      body: copy.summary,
-    },
-    render() {
-      return html\`
+  define(function CeProfileTabs() {
+    const active = signal('summary');
+    const body = derived(() => copy[active()]);
+    const isSummary = derived(() => active() === 'summary');
+    const isUsage = derived(() => active() === 'usage');
+    const isRelease = derived(() => active() === 'release');
+
+    return html\`
         <style>
           .tabs {
             max-width: 560px;
@@ -487,32 +463,153 @@ const PLAYGROUND_PRESETS = {
 
         <section class="tabs">
           <div class="tab-list">
-            <button showSummary="click" type="button" aria-current="\${this.state.active === 'summary'}">Summary</button>
-            <button showUsage="click" type="button" aria-current="\${this.state.active === 'usage'}">Usage</button>
-            <button showRelease="click" type="button" aria-current="\${this.state.active === 'release'}">Release</button>
+            <button onclick=\${() => active.set('summary')} type="button" aria-current="\${isSummary}">Summary</button>
+            <button onclick=\${() => active.set('usage')} type="button" aria-current="\${isUsage}">Usage</button>
+            <button onclick=\${() => active.set('release')} type="button" aria-current="\${isRelease}">Release</button>
           </div>
-          <p>\${this.bind('body')}</p>
+          <p>\${body}</p>
         </section>
       \`;
+  });
+})();`,
     },
-    handlers: {
-      showSummary() {
-        this.setState({ active: 'summary', body: copy.summary });
-      },
-      showUsage() {
-        this.setState({ active: 'usage', body: copy.usage });
-      },
-      showRelease() {
-        this.setState({ active: 'release', body: copy.release });
-      },
-    },
+  },
+  data: {
+    label: 'Data state match',
+    source: {
+      html: `<ce-post-list></ce-post-list>`,
+      css: `body {
+  margin: 0;
+  padding: 1rem;
+  font-family: Inter, system-ui, sans-serif;
+  background: #f6f7fb;
+  color: #172033;
+}`,
+      js: `(async () => {
+  const { define, html, signal, derived, match } = window.__PLAYGROUND_CE_API__ ?? {};
+  if (!(define && html && signal && derived && match)) {
+    throw new Error('CE runtime is unavailable in playground preview.');
+  }
+
+  const postsApi = () =>
+    new Promise((resolve) => {
+      setTimeout(() => {
+        resolve([
+          { id: 1, title: 'Signals keep small values focused', body: 'Signal slots update without rerunning the whole render path.' },
+          { id: 2, title: 'Setup owns component state', body: 'Props, local signals, derived values, and actions live together.' },
+          { id: 3, title: 'Match keeps async states explicit', body: 'Use JavaScript state machines instead of hiding control flow.' },
+        ]);
+      }, 520);
+    });
+
+  define(function CePostList({ lifecycle }) {
+    const query = signal('');
+    const result = signal({ phase: 'idle', data: [], error: null });
+
+    const visiblePosts = derived(() => {
+      const current = result();
+      if (current.phase !== 'success') return [];
+
+      const keyword = query().trim().toLowerCase();
+      if (!keyword) return current.data;
+
+      return current.data.filter((post) =>
+        post.title.toLowerCase().includes(keyword) ||
+        post.body.toLowerCase().includes(keyword)
+      );
+    });
+
+    async function load() {
+      result.set({ phase: 'loading', data: [], error: null });
+
+      try {
+        result.set({ phase: 'success', data: await postsApi(), error: null });
+      } catch (error) {
+        result.set({ phase: 'failed', data: [], error });
+      }
+    }
+
+    lifecycle.connected(() => {
+      void load();
+    });
+
+    return () => html\`
+        <style>
+          .panel {
+            display: grid;
+            gap: 0.75rem;
+            max-width: 680px;
+            border: 1px solid #d7dce5;
+            border-radius: 8px;
+            background: #fff;
+            padding: 1rem;
+          }
+
+          h2 {
+            margin: 0;
+            font-size: 1rem;
+          }
+
+          input {
+            border: 1px solid #c9d1dc;
+            border-radius: 8px;
+            padding: 0.55rem 0.65rem;
+            font: inherit;
+          }
+
+          ul {
+            display: grid;
+            gap: 0.5rem;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+          }
+
+          li {
+            border: 1px solid #e1e6ef;
+            border-radius: 8px;
+            padding: 0.75rem;
+          }
+
+          strong {
+            display: block;
+            margin-bottom: 0.25rem;
+          }
+
+          p {
+            margin: 0;
+            color: #4b5563;
+          }
+        </style>
+
+        <section class="panel">
+          <h2>Fetched list with explicit state matching</h2>
+          <input type="search" placeholder="Filter posts" oninput=\${(event) => query.set(event.target.value)} />
+
+          \${match(result())
+            .when((result) => result.phase === 'idle', () => html\`<p>Ready.</p>\`)
+            .when((result) => result.phase === 'loading', () => html\`<p>Loading posts...</p>\`)
+            .when((result) => result.phase === 'failed', ({ error }) => html\`<p>Error: \${error?.message ?? error}</p>\`)
+            .when((result) => result.phase === 'success', () => html\`
+              <ul>
+                \${visiblePosts().map((post) => html\`
+                  <li>
+                    <strong>\${post.title}</strong>
+                    <p>\${post.body}</p>
+                  </li>
+                \`)}
+              </ul>
+            \`)
+            .otherwise(() => html\`<p>Unknown state.</p>\`)}
+        </section>
+      \`;
   });
 })();`,
     },
   },
 };
 
-const CE_PRESET_KEYS = new Set(['ce', 'fine', 'todo', 'products', 'tabs']);
+const CE_PRESET_KEYS = new Set(['ce', 'fine', 'todo', 'products', 'tabs', 'data']);
 
 function escapeScriptContent(source) {
   return source.replace(/<\/script/gi, '<\\/script');
@@ -540,7 +637,7 @@ function buildPreviewDocument({ html, css, js, runtimeModuleSource = '' }) {
   const safeJs = escapeScriptContent(js);
   const safeRuntime = escapeScriptContent(runtimeModuleSource);
   const runtimeBootstrap = safeRuntime
-    ? `<script type="module">\n${safeRuntime}\nwindow.__PLAYGROUND_CE_RUNTIME__ = { CE, html };\n<\/script>`
+    ? `<script type="module">\n${safeRuntime}\nwindow.__PLAYGROUND_CE_RUNTIME__ = { CE, html };\nwindow.__PLAYGROUND_CE_MATCH__ = match;\nwindow.__PLAYGROUND_CE_API__ = { define, html, signal, derived, effect, match };\n<\/script>`
     : '';
 
   return `<!doctype html>

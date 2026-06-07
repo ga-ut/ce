@@ -12,24 +12,39 @@ const siteFiles = [
   'docs/site/usage.html',
   'docs/site/components.html',
   'docs/site/roadmap.html',
+  'docs/site/api.html',
+  'docs/site/release.html',
   'docs/site/assets/app.js',
 ];
 
 const expectedLinks = [
-  'https://github.com/ga-ut/ce/blob/main/docs/api.md',
-  'https://github.com/ga-ut/ce/blob/main/docs/release.md',
+  'api.html',
+  'release.html',
 ];
 
-test('pages docs references use GitHub-hosted markdown links (no parent traversal)', async () => {
+const filesWithReferenceLinks = [
+  'docs/site/index.html',
+  'docs/site/usage.html',
+  'docs/site/components.html',
+  'docs/site/roadmap.html',
+  'docs/site/assets/app.js',
+];
+
+test('pages docs references use internal HTML doc pages', async () => {
   for (const relativePath of siteFiles) {
     const fullPath = path.join(repoRoot, relativePath);
     const content = await readFile(fullPath, 'utf8');
 
     assert.doesNotMatch(
       content,
-      /\.\.\/api\.md|\.\.\/release\.md/,
-      `${relativePath} should not use ../*.md links because Pages serves site files from repository subpath root.`
+      /https:\/\/github\.com\/ga-ut\/ce\/blob\/main\/docs\/(?:api|release)\.md|\.\.\/(?:api|release)\.md/,
+      `${relativePath} should link to internal docs site pages instead of GitHub markdown or parent traversal.`
     );
+  }
+
+  for (const relativePath of filesWithReferenceLinks) {
+    const fullPath = path.join(repoRoot, relativePath);
+    const content = await readFile(fullPath, 'utf8');
 
     for (const expected of expectedLinks) {
       assert.match(content, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
