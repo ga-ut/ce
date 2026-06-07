@@ -3,12 +3,17 @@
   "version": "0.1.0",
   "description": "Custom Elements runtime with signals and static page generation",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ga-ut/ce.git",
+    "directory": "packages/ce"
+  },
   "sideEffects": false,
   "files": [
     "dist"
   ],
   "bin": {
-    "ce-cli": "./dist/cli/index.mjs"
+    "ce-cli": "dist/cli/index.mjs"
   },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
