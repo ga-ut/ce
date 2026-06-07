@@ -4,22 +4,90 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CE Docs Site | Roadmap</title>
-    <link rel="stylesheet" href="assets/styles.css?v=20260607-ce-doc-pages" />
-    <script type="module" src="assets/app.js?v=20260607-ce-doc-shell"></script>
+    <link rel="stylesheet" href="assets/styles.css?v=20260607-static-docs" />
   </head>
-  <body data-page="roadmap">
-    <main>
-      <section class="card">
-        <h2>Roadmap</h2>
-        <p>Current planning aligns feature work with compatibility requirements and release verification.</p>
-      </section>
-      <section class="card">
-        <h2>Planning Inputs</h2>
-        <ul>
-          <li><a href="api.html">API constraints and semver</a></li>
-          <li><a href="release.html">Release quality gates</a></li>
-        </ul>
-      </section>
-    </main>
+  <body>
+<docs-page>
+    <div class="site-page">
+      <header class="site-header">
+        <div class="site-header__inner">
+          <h1 class="site-title">CE Docs Site</h1>
+          <nav class="site-nav" aria-label="Primary navigation">
+            <a href="index.html">Overview</a>
+              <a href="usage.html">Usage</a>
+              <a href="api.html">API</a>
+              <a href="components.html">Components</a>
+              <a href="roadmap.html" aria-current="page">Roadmap</a>
+              <a href="release.html">Release</a>
+              <a href="playground.html">Playground</a>
+          </nav>
+        </div>
+      </header>
+      <div class="site-shell">
+        <div class="docs-layout">
+          <aside class="docs-sidebar" aria-label="Documentation sections">
+            <section class="docs-nav-group">
+              <h2>Start</h2>
+              <ul>
+                <li><a href="index.html">Overview</a></li>
+                <li><a href="usage.html">Usage guide</a></li>
+                <li><a href="playground.html">Playground</a></li>
+              </ul>
+            </section>
+            <section class="docs-nav-group">
+              <h2>Reference</h2>
+              <ul>
+                <li><a href="api.html">Public API</a></li>
+                <li><a href="components.html">Component model</a></li>
+                <li><a href="roadmap.html" aria-current="page">Roadmap</a></li>
+              </ul>
+            </section>
+            <section class="docs-nav-group">
+              <h2>Project</h2>
+              <ul>
+                <li><a href="release.html">Release process</a></li>
+              </ul>
+            </section>
+          </aside>
+          <div class="docs-main">
+            <main>
+                    <article class="doc-page">
+        <h2 id="roadmap">Roadmap</h2>
+        <p>Roadmap decisions are evaluated against runtime size, custom element compatibility, and the validation gates required before release.</p>
+
+        <h3 id="current-focus">Current focus</h3>
+        <p>The current direction is to make function components, signals, derived values, explicit state matching, and the playground examples feel coherent as one API.</p>
+
+        <h3 id="compatibility-rules">Compatibility rules</h3>
+        <p>Runtime changes should preserve existing custom element behavior unless a major version explicitly documents the migration. New helpers should be optional and additive.</p>
+
+        <h3 id="documentation-rules">Documentation rules</h3>
+        <p>Docs pages should explain the behavior directly on the page. Navigation and table-of-contents links help movement, but they should not replace the explanation.</p>
+
+        <h3 id="release-readiness">Release readiness</h3>
+        <p>A roadmap item is not ready to publish until source validation, event behavior tests, docs validation, and package build checks match the files changed.</p>
+      </article>
+
+            </main>
+            <footer class="site-footer">
+              <p>CE docs describe the runtime surface, component model, release gates, and playground examples in-place.</p>
+            </footer>
+          </div>
+          <aside class="docs-toc" aria-label="On this page">
+            <nav class="generated-toc" aria-label="On this page">
+              <h2>On this page</h2>
+              <ul>
+                <li><a href="#roadmap" data-depth="2">Roadmap</a></li>
+                <li><a href="#current-focus" data-depth="3">Current focus</a></li>
+                <li><a href="#compatibility-rules" data-depth="3">Compatibility rules</a></li>
+                <li><a href="#documentation-rules" data-depth="3">Documentation rules</a></li>
+                <li><a href="#release-readiness" data-depth="3">Release readiness</a></li>
+              </ul>
+            </nav>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </docs-page>
   </body>
 </html>

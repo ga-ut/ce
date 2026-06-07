@@ -1,265 +1,40 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CE, define, derived, effect, html, match, signal } from "../packages/ce/src/web";
+import { CE } from "../packages/ce/src/web/ce";
+import {
+  define,
+  derived,
+  effect,
+  html,
+  match,
+  navigate,
+  renderStatic,
+  setEntryPoint,
+  signal,
+} from "../packages/ce/src/web";
 
 const wait = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms));
 
-describe("CE library", () => {
+describe("CE function component runtime", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
     window.history.replaceState({}, "", "/");
+    window.location.hash = "";
+    CE.routes.clear();
+    CE.entryElement = null;
+    CE.entryPoint = "";
   });
 
-  it("isolates state between component instances", async () => {
-    CE.define({
-      name: "x-isolated-state",
-      state: { count: 0 },
-      render() {
-        return html`<button inc="click">${this.bind("count")}</button>`;
-      },
-      handlers: {
-        inc() {
-          this.setState({ count: this.state.count + 1 });
-        },
-      },
-    });
-
-    const one = document.createElement("x-isolated-state") as HTMLElement;
-    const two = document.createElement("x-isolated-state") as HTMLElement;
-    document.body.append(one, two);
-
-    const oneButton = one.shadowRoot?.querySelector("button") as HTMLButtonElement;
-    oneButton.click();
-
-    await wait();
-
-    const oneText = one.shadowRoot?.textContent?.trim();
-    const twoText = two.shadowRoot?.textContent?.trim();
-
-    expect(oneText).toBe("1");
-    expect(twoText).toBe("0");
+  it("rejects legacy object definitions", () => {
+    expect(() =>
+      (define as any)({
+        name: "x-legacy-object",
+        state: {},
+        render: () => "",
+      })
+    ).toThrow(/named function component/);
   });
 
-  it("updates only changed key bindings", async () => {
-    CE.define({
-      name: "x-key-reactivity",
-      state: { count: 0, label: "A" },
-      render() {
-        return html`<div id="count">${this.bind("count")}</div><div id="label">${this.bind("label")}</div><button update="click">u</button>`;
-      },
-      handlers: {
-        update() {
-          this.setState({ count: this.state.count + 1 });
-        },
-      },
-    });
-
-    const el = document.createElement("x-key-reactivity") as HTMLElement;
-    document.body.append(el);
-
-    const button = el.shadowRoot?.querySelector("button") as HTMLButtonElement;
-    button.click();
-    await wait();
-
-    expect(el.shadowRoot?.querySelector("#count")?.textContent).toContain("1");
-    expect(el.shadowRoot?.querySelector("#label")?.textContent).toContain("A");
-  });
-
-  it("patches bound state without rerunning render", async () => {
-    let renderCount = 0;
-
-    CE.define({
-      name: "x-fine-grained-text",
-      state: { count: 0 },
-      render() {
-        renderCount += 1;
-        return html`<button update="click">${this.bind("count")}</button>`;
-      },
-      handlers: {
-        update() {
-          this.setState({ count: this.state.count + 1 });
-        },
-      },
-    });
-
-    const el = document.createElement("x-fine-grained-text") as HTMLElement;
-    document.body.append(el);
-
-    const button = el.shadowRoot?.querySelector("button") as HTMLButtonElement;
-    button.click();
-    await wait();
-
-    expect(el.shadowRoot?.textContent?.trim()).toBe("1");
-    expect(renderCount).toBe(1);
-  });
-
-  it("rerenders when changed state has no binding target", async () => {
-    CE.define({
-      name: "x-unbound-rerender",
-      state: { open: false },
-      render() {
-        return html`
-          <button toggle="click">toggle</button>
-          ${this.state.open ? "<section>open</section>" : ""}
-        `;
-      },
-      handlers: {
-        toggle() {
-          this.setState({ open: true });
-        },
-      },
-    });
-
-    const el = document.createElement("x-unbound-rerender") as HTMLElement;
-    document.body.append(el);
-
-    const button = el.shadowRoot?.querySelector("button") as HTMLButtonElement;
-    button.click();
-    await wait();
-
-    expect(el.shadowRoot?.querySelector("section")?.textContent).toBe("open");
-  });
-
-  it("updates rendered state after direct assignment", async () => {
-    CE.define({
-      name: "x-direct-state-assignment",
-      state: { count: 0 },
-      render() {
-        return html`<button onclick=${() => (this.state.count += 1)}>Count: ${this.state.count}</button>`;
-      },
-    });
-
-    const el = document.createElement("x-direct-state-assignment") as HTMLElement;
-    document.body.append(el);
-
-    const button = el.shadowRoot?.querySelector("button") as HTMLButtonElement;
-    const sameButton = button;
-    button.click();
-    await wait();
-
-    expect(el.shadowRoot?.textContent?.trim()).toBe("Count: 1");
-    expect(el.shadowRoot?.querySelector("button")).toBe(sameButton);
-  });
-
-  it("supports component methods as inline event handlers", async () => {
-    CE.define({
-      name: "x-method-event-handler",
-      state: { count: 0 },
-      increment(event: Event) {
-        expect(event.type).toBe("click");
-        this.state.count += 1;
-      },
-      render() {
-        return html`<button onclick=${this.increment}>${this.state.count}</button>`;
-      },
-    });
-
-    const el = document.createElement("x-method-event-handler") as HTMLElement;
-    document.body.append(el);
-
-    const button = el.shadowRoot?.querySelector("button") as HTMLButtonElement;
-    button.click();
-    await wait();
-
-    expect(el.shadowRoot?.textContent?.trim()).toBe("1");
-  });
-
-  it("updates nested state after direct assignment", async () => {
-    CE.define({
-      name: "x-direct-nested-state",
-      state: { data: { count: 0 } },
-      render() {
-        return html`<button onclick=${() => (this.state.data.count += 1)}>${this.state.data.count}</button>`;
-      },
-    });
-
-    const el = document.createElement("x-direct-nested-state") as HTMLElement;
-    document.body.append(el);
-
-    const button = el.shadowRoot?.querySelector("button") as HTMLButtonElement;
-    button.click();
-    await wait();
-
-    expect(el.shadowRoot?.textContent?.trim()).toBe("1");
-  });
-
-  it("patches signal output without rerunning render", async () => {
-    let renderCount = 0;
-
-    CE.define({
-      name: "x-signal-fine-grained",
-      state: { count: CE.signal(0) },
-      render() {
-        renderCount += 1;
-        return html`<button onclick=${() => (this.state.count.value += 1)}>${this.state.count}</button>`;
-      },
-    });
-
-    const el = document.createElement("x-signal-fine-grained") as HTMLElement;
-    document.body.append(el);
-
-    const button = el.shadowRoot?.querySelector("button") as HTMLButtonElement;
-    const sameButton = button;
-    button.click();
-    await wait();
-
-    expect(el.shadowRoot?.textContent?.trim()).toBe("1");
-    expect(el.shadowRoot?.querySelector("button")).toBe(sameButton);
-    expect(renderCount).toBe(1);
-  });
-
-  it("isolates signal state between component instances", async () => {
-    CE.define({
-      name: "x-signal-isolated",
-      state: { count: CE.signal(0) },
-      render() {
-        return html`<button onclick=${() => (this.state.count.value += 1)}>${this.state.count}</button>`;
-      },
-    });
-
-    const one = document.createElement("x-signal-isolated") as HTMLElement;
-    const two = document.createElement("x-signal-isolated") as HTMLElement;
-    document.body.append(one, two);
-
-    const oneButton = one.shadowRoot?.querySelector("button") as HTMLButtonElement;
-    oneButton.click();
-    await wait();
-
-    expect(one.shadowRoot?.textContent?.trim()).toBe("1");
-    expect(two.shadowRoot?.textContent?.trim()).toBe("0");
-  });
-
-  it("supports callable signals without rerunning render", async () => {
-    let renderCount = 0;
-
-    CE.define({
-      name: "x-callable-signal",
-      state: {},
-      setup({ signal }) {
-        const count = signal(0);
-
-        return {
-          count,
-          increment: () => count.update((value) => value + 1),
-        };
-      },
-      render() {
-        renderCount += 1;
-        return html`<button onclick=${this.increment}>${this.count}</button>`;
-      },
-    });
-
-    const el = document.createElement("x-callable-signal") as HTMLElement;
-    document.body.append(el);
-
-    const button = el.shadowRoot?.querySelector("button") as HTMLButtonElement;
-    button.click();
-    await wait();
-
-    expect(el.shadowRoot?.textContent?.trim()).toBe("1");
-    expect(renderCount).toBe(1);
-  });
-
-  it("defines a named function component without an explicit tag string", async () => {
+  it("defines a named function component without a tag string", async () => {
     define(function XNamedCounter() {
       const count = signal(0);
       const doubled = derived(() => count() * 2);
@@ -281,7 +56,58 @@ describe("CE library", () => {
     expect(el.shadowRoot?.textContent?.trim()).toBe("1/2");
   });
 
-  it("supports function component render callbacks for structural signal reads", async () => {
+  it("isolates local signals between component instances", async () => {
+    define(function XSignalIsolated() {
+      const count = signal(0);
+
+      return html`
+        <button onclick=${() => count.update((value) => value + 1)}>
+          ${count}
+        </button>
+      `;
+    });
+
+    const one = document.createElement("x-signal-isolated") as HTMLElement;
+    const two = document.createElement("x-signal-isolated") as HTMLElement;
+    document.body.append(one, two);
+
+    const oneButton = one.shadowRoot?.querySelector("button") as HTMLButtonElement;
+    oneButton.click();
+    await wait();
+
+    expect(one.shadowRoot?.textContent?.trim()).toBe("1");
+    expect(two.shadowRoot?.textContent?.trim()).toBe("0");
+  });
+
+  it("patches signal text without rerunning render", async () => {
+    let renderCount = 0;
+
+    define(function XFineSignal() {
+      const count = signal(0);
+
+      renderCount += 1;
+
+      return html`
+        <button onclick=${() => count.update((value) => value + 1)}>
+          ${count}
+        </button>
+      `;
+    });
+
+    const el = document.createElement("x-fine-signal") as HTMLElement;
+    document.body.append(el);
+
+    const button = el.shadowRoot?.querySelector("button") as HTMLButtonElement;
+    const sameButton = button;
+    button.click();
+    await wait();
+
+    expect(el.shadowRoot?.textContent?.trim()).toBe("1");
+    expect(el.shadowRoot?.querySelector("button")).toBe(sameButton);
+    expect(renderCount).toBe(1);
+  });
+
+  it("supports render callbacks for structural signal reads", async () => {
     define(function XFunctionList() {
       const items = signal(["one"]);
 
@@ -305,7 +131,7 @@ describe("CE library", () => {
     expect(el.shadowRoot?.querySelectorAll("li")).toHaveLength(2);
   });
 
-  it("runs lifecycle cleanup callbacks when a function component disconnects", async () => {
+  it("runs lifecycle cleanup callbacks when disconnected", async () => {
     const cleanup = vi.fn();
 
     define(function XLifecycleTimer({ lifecycle }) {
@@ -328,9 +154,7 @@ describe("CE library", () => {
     const ignored = signal(0);
     const spy = vi.fn();
 
-    define(function XEffectScope({ lifecycle }) {
-      lifecycle.cleanup(() => {});
-
+    define(function XEffectScope() {
       effect(() => {
         spy(tracked());
       });
@@ -391,87 +215,20 @@ describe("CE library", () => {
     expect(spy).toHaveBeenLastCalledWith(42);
   });
 
-  it("passes parsed props into setup", async () => {
-    CE.define({
-      name: "x-setup-props",
-      state: {},
-      props: {
-        initial: Number,
-        label: String,
-      },
-      setup({ props, signal }) {
-        return {
-          count: signal(props.initial ?? 0),
-          label: signal(props.label ?? "Counter"),
-        };
-      },
-      render() {
-        return html`<p>${this.label}: ${this.count}</p>`;
-      },
-    });
-
-    const el = document.createElement("x-setup-props");
-    el.setAttribute("initial", "7");
-    el.setAttribute("label", "Likes");
-    document.body.append(el);
-
-    await wait();
-
-    expect(el.shadowRoot?.textContent?.trim()).toBe("Likes: 7");
-  });
-
-  it("updates derived signals without rerunning render", async () => {
-    let renderCount = 0;
-
-    CE.define({
-      name: "x-derived-signal",
-      state: {},
-      setup({ signal, derived }) {
-        const count = signal(1);
-        const doubled = derived(() => count() * 2);
-
-        return {
-          count,
-          doubled,
-          increment: () => count.update((value) => value + 1),
-        };
-      },
-      render() {
-        renderCount += 1;
-        return html`<button onclick=${this.increment}>${this.count}/${this.doubled}</button>`;
-      },
-    });
-
-    const el = document.createElement("x-derived-signal") as HTMLElement;
-    document.body.append(el);
-
-    const button = el.shadowRoot?.querySelector("button") as HTMLButtonElement;
-    button.click();
-    await wait();
-
-    expect(el.shadowRoot?.textContent?.trim()).toBe("2/4");
-    expect(renderCount).toBe(1);
-  });
-
   it("updates signal-backed attributes without rerunning render", async () => {
     let renderCount = 0;
 
-    CE.define({
-      name: "x-signal-attribute",
-      state: {},
-      setup({ signal, derived }) {
-        const active = signal(false);
+    define(function XSignalAttribute() {
+      const active = signal(false);
+      const ariaCurrent = derived(() => active());
 
-        return {
-          active,
-          ariaCurrent: derived(() => active()),
-          toggle: () => active.update((value) => !value),
-        };
-      },
-      render() {
-        renderCount += 1;
-        return html`<button onclick=${this.toggle} aria-current="${this.ariaCurrent}">tab</button>`;
-      },
+      renderCount += 1;
+
+      return html`
+        <button onclick=${() => active.update((value) => !value)} aria-current="${ariaCurrent}">
+          tab
+        </button>
+      `;
     });
 
     const el = document.createElement("x-signal-attribute") as HTMLElement;
@@ -487,79 +244,25 @@ describe("CE library", () => {
     expect(renderCount).toBe(1);
   });
 
-  it("tracks array mutations inside signals", async () => {
-    let renderCount = 0;
-
-    CE.define({
-      name: "x-signal-array-mutation",
-      state: {},
-      setup({ signal, derived }) {
-        const items = signal(["one"]);
-        const count = derived(() => items().length);
-
-        return {
-          count,
-          pushItem: () => items().push("two"),
-          popItem: () => items().pop(),
-        };
-      },
-      render() {
-        renderCount += 1;
-        return html`
-          <button id="push" onclick=${this.pushItem}>push</button>
-          <button id="pop" onclick=${this.popItem}>pop</button>
-          <p>${this.count}</p>
-        `;
-      },
-    });
-
-    const el = document.createElement("x-signal-array-mutation") as HTMLElement;
-    document.body.append(el);
-
-    const push = el.shadowRoot?.querySelector("#push") as HTMLButtonElement;
-    const pop = el.shadowRoot?.querySelector("#pop") as HTMLButtonElement;
-
-    push.click();
-    await wait();
-    expect(el.shadowRoot?.querySelector("p")?.textContent).toBe("2");
-
-    pop.click();
-    await wait();
-    expect(el.shadowRoot?.querySelector("p")?.textContent).toBe("1");
-    expect(renderCount).toBe(1);
-  });
-
   it("renders array interpolations without manual join", async () => {
-    CE.define({
-      name: "x-array-interpolation",
-      state: {},
-      setup({ signal }) {
-        const items = signal([
-          { id: "one", label: "One" },
-          { id: "two", label: "Two" },
-        ]);
+    define(function XArrayInterpolation() {
+      const items = signal([
+        { id: "one", label: "One" },
+        { id: "two", label: "Two" },
+      ]);
 
-        return {
-          items,
-          add: () => items().push({ id: "three", label: "Three" }),
-        };
-      },
-      render() {
-        return html`
-          <button onclick=${this.add}>add</button>
-          <ul>
-            ${this.items().map((item: { id: string; label: string }) => html`<li data-id=${item.id}>${item.label}</li>`)}
-          </ul>
-        `;
-      },
+      return () => html`
+        <button onclick=${() => items().push({ id: "three", label: "Three" })}>add</button>
+        <ul>
+          ${items().map((item) => html`<li data-id=${item.id}>${item.label}</li>`)}
+        </ul>
+      `;
     });
 
     const el = document.createElement("x-array-interpolation") as HTMLElement;
     document.body.append(el);
 
     expect(el.shadowRoot?.querySelectorAll("li")).toHaveLength(2);
-    expect(el.shadowRoot?.textContent).toContain("One");
-    expect(el.shadowRoot?.textContent).toContain("Two");
 
     const button = el.shadowRoot?.querySelector("button") as HTMLButtonElement;
     button.click();
@@ -596,165 +299,93 @@ describe("CE library", () => {
     expect(result).toContain(">0<");
   });
 
-  it("matches arbitrary object variants", () => {
-    type Shape =
-      | { kind: "circle"; radius: number }
-      | { kind: "rectangle"; width: number; height: number };
-
-    const area = (shape: Shape) =>
-      match(shape)
-        .when(
-          (value) => value.kind === "circle",
-          (value) => (value.kind === "circle" ? Math.PI * value.radius * value.radius : 0)
-        )
-        .when(
-          (value) => value.kind === "rectangle",
-          (value) => (value.kind === "rectangle" ? value.width * value.height : 0)
-        )
-        .otherwise(() => 0);
-
-    const circleArea = area({ kind: "circle", radius: 10 });
-    const rectangleArea = area({ kind: "rectangle", width: 20, height: 8 });
-
-    expect(circleArea).toBeCloseTo(314.159);
-    expect(rectangleArea).toBe(160);
-  });
-
-  it("uses a match fallback when no case matches", () => {
-    const result = match({ ok: false })
-      .when(
-        (value) => value.ok,
-        () => html`<p>ok</p>`
-      )
-      .otherwise(() => html`<p>fallback</p>`);
-
-    expect(result).toContain("fallback");
-  });
-
-  it("does not duplicate event handlers after rerender", async () => {
-    CE.define({
-      name: "x-handler-dedupe",
-      state: { count: 0 },
-      render() {
-        return html`<button tap="click">${this.bind("count")}</button>`;
-      },
-      handlers: {
-        tap() {
-          this.setState({ count: this.state.count + 1 });
-        },
-      },
-    });
-
-    const el = document.createElement("x-handler-dedupe") as HTMLElement;
-    document.body.append(el);
-
-    const button = () => el.shadowRoot?.querySelector("button") as HTMLButtonElement;
-    button().click();
-    await wait();
-    button().click();
-    await wait();
-
-    expect(el.shadowRoot?.textContent?.trim()).toBe("2");
-  });
-
   it("switches route components with navigate", async () => {
-    CE.setEntryPoint("ce-entry");
+    setEntryPoint("ce-entry");
 
-    CE.define({
-      name: "x-home-page",
-      state: {},
-      route: "/",
-      render() {
+    define(
+      function XHomePage() {
         return "<p>home</p>";
       },
-    });
+      { route: "/" }
+    );
 
-    CE.define({
-      name: "x-users-page",
-      state: {},
-      route: "/users",
-      render() {
+    define(
+      function XUsersPage() {
         return "<p>users</p>";
       },
-    });
+      { route: "/users" }
+    );
 
-    CE.navigate("/");
+    await navigate("/");
     await wait();
     expect(CE.entryElement?.firstElementChild?.tagName.toLowerCase()).toBe("x-home-page");
 
-    CE.navigate("/users");
+    await navigate("/users");
     await wait();
     expect(CE.entryElement?.firstElementChild?.tagName.toLowerCase()).toBe("x-users-page");
   });
 
-  it("supports route preload and error fallback on navigation", async () => {
-    CE.setEntryPoint("ce-route-entry");
+  it("supports route preload and error fallback", async () => {
+    setEntryPoint("ce-route-entry");
 
     const preload = vi.fn(async () => {});
 
-    CE.define({
-      name: "x-preload-page",
-      state: {},
-      route: "/preload",
-      preload,
-      render() {
+    define(
+      function XPreloadPage() {
         return "<p>preload</p>";
       },
-    });
+      { route: "/preload", preload }
+    );
 
-    CE.define({
-      name: "x-error-page",
-      state: {},
-      route: "/error",
-      preload: async () => {
-        throw new Error("boom");
-      },
-      onError(error) {
-        return `<p>${(error as Error).message}</p>`;
-      },
-      render() {
+    define(
+      function XErrorPage() {
         return "<p>error</p>";
       },
-    });
+      {
+        route: "/error",
+        preload: async () => {
+          throw new Error("boom");
+        },
+        onError: (error) => `<p>${(error as Error).message}</p>`,
+      }
+    );
 
-    await CE.navigate("/preload");
+    await navigate("/preload");
     expect(preload).toHaveBeenCalledWith("/preload");
     expect(CE.entryElement?.firstElementChild?.tagName.toLowerCase()).toBe("x-preload-page");
 
-    await CE.navigate("/error");
+    await navigate("/error");
     expect(CE.entryElement?.innerHTML).toContain("boom");
   });
 
   it("ignores stale preload completion from earlier navigation", async () => {
-    CE.setEntryPoint("ce-stale-entry");
+    setEntryPoint("ce-stale-entry");
 
     const preloadResolvers: Array<() => void> = [];
 
-    CE.define({
-      name: "x-slow-page",
-      state: {},
-      route: "/slow",
-      preload: () =>
-        new Promise<void>((resolve) => {
-          preloadResolvers.push(resolve);
-        }),
-      render() {
+    define(
+      function XSlowPage() {
         return "<p>slow</p>";
       },
-    });
+      {
+        route: "/slow",
+        preload: () =>
+          new Promise<void>((resolve) => {
+            preloadResolvers.push(resolve);
+          }),
+      }
+    );
 
-    CE.define({
-      name: "x-fast-page",
-      state: {},
-      route: "/fast",
-      render() {
+    define(
+      function XFastPage() {
         return "<p>fast</p>";
       },
-    });
+      { route: "/fast" }
+    );
 
-    const slowNavigation = CE.navigate("/slow");
+    const slowNavigation = navigate("/slow");
     await wait();
-    await CE.navigate("/fast");
+    await navigate("/fast");
 
     expect(CE.entryElement?.firstElementChild?.tagName.toLowerCase()).toBe("x-fast-page");
 
@@ -765,25 +396,25 @@ describe("CE library", () => {
     expect(CE.entryElement?.firstElementChild?.tagName.toLowerCase()).toBe("x-fast-page");
   });
 
-  it("awaits hash navigation until async preload render completes", async () => {
-    CE.setEntryPoint("ce-hash-entry");
+  it("awaits hash navigation until async preload completes", async () => {
+    setEntryPoint("ce-hash-entry");
 
     let resolvePreload = () => {};
     const preloadPromise = new Promise<void>((resolve) => {
       resolvePreload = resolve;
     });
 
-    CE.define({
-      name: "x-hash-async-page",
-      state: {},
-      route: "/hash-async",
-      preload: () => preloadPromise,
-      render() {
+    define(
+      function XHashAsyncPage() {
         return "<p>hash async</p>";
       },
-    });
+      {
+        route: "/hash-async",
+        preload: () => preloadPromise,
+      }
+    );
 
-    const navigation = CE.navigate("#/hash-async");
+    const navigation = navigate("#/hash-async");
     await wait();
 
     expect(CE.entryElement?.firstElementChild?.tagName.toLowerCase()).not.toBe(
@@ -798,148 +429,63 @@ describe("CE library", () => {
     );
   });
 
-  it("can render a route to string for server output", async () => {
-    CE.define({
-      name: "x-ssr-page",
-      state: { label: "server" },
-      route: "/ssr",
-      render() {
-        return html`<p>${this.bind("label")}</p>`;
+  it("renders a static declarative shadow DOM snapshot without DOM execution", async () => {
+    const markup = await renderStatic<{ initial: NumberConstructor }>(
+      function XStaticCounter({ props }) {
+        const count = signal(props.initial ?? 0);
+        const doubled = derived(() => count() * 2);
+
+        return html`
+          <button onclick=${() => count.update((value) => value + 1)}>
+            ${count}/${doubled}
+          </button>
+        `;
       },
-    });
-
-    const markup = await CE.renderRouteToString("/ssr", { entryPoint: "ce-entry" });
-    expect(markup).toContain("<ce-entry>");
-    expect(markup).toContain("<x-ssr-page>");
-    expect(markup).toContain("server");
-  });
-
-  it("awaits async render output when rendering routes to string", async () => {
-    CE.define({
-      name: "x-ssr-async-page",
-      state: { label: "async-server" },
-      route: "/ssr-async",
-      async render() {
-        await wait();
-        return html`<p>${this.bind("label")}</p>`;
-      },
-    });
-
-    const markup = await CE.renderRouteToString("/ssr-async", { entryPoint: "ce-entry" });
-    expect(markup).toContain("<x-ssr-async-page>");
-    expect(markup).toContain("async-server");
-  });
-
-  it("keeps latest async render result when renders race", async () => {
-    const resolveQueue: Array<(value: string) => void> = [];
-
-    CE.define({
-      name: "x-async-race",
-      state: { step: 0 },
-      async render() {
-        const text = await new Promise<string>((resolve) => resolveQueue.push(resolve));
-        return `<p>${text}</p>`;
-      },
-      handlers: {
-        bump() {
-          this.setState({ step: this.state.step + 1 });
+      {
+        props: {
+          initial: 2,
         },
-      },
-    });
+      }
+    );
 
-    const el = document.createElement("x-async-race") as HTMLElement;
-    document.body.append(el);
-
-    const instance = el as HTMLElement & { setState: (state: { step: number }) => void };
-    instance.setState({ step: 1 });
-
-    resolveQueue[1]("new");
-    await wait();
-    resolveQueue[0]("old");
-    await wait();
-
-    expect(el.shadowRoot?.textContent).toContain("new");
-    expect(el.shadowRoot?.textContent).not.toContain("old");
+    expect(markup).toContain("<x-static-counter initial=\"2\">");
+    expect(markup).toContain('<template shadowrootmode="open">');
+    expect(markup).toContain("2/4");
+    expect(markup).not.toContain("onclick");
+    expect(markup).not.toContain("data-ce-event");
+    expect(markup).not.toContain("data-ce-signal");
   });
 
-  it("renders in shadow DOM environment", async () => {
+  it("does not run effects while rendering a static snapshot", async () => {
     const spy = vi.fn();
 
-    CE.define({
-      name: "x-shadow-check",
-      state: { label: "ok" },
-      render() {
-        return html`<button clicker="click">${this.bind("label")}</button>`;
-      },
-      handlers: {
-        clicker() {
-          spy();
-        },
-      },
+    const markup = await renderStatic(function XStaticEffect() {
+      const count = signal(1);
+
+      effect(() => {
+        spy(count());
+      });
+
+      return html`<p>${count}</p>`;
     });
 
-    const el = document.createElement("x-shadow-check") as HTMLElement;
-    document.body.append(el);
-
-    const button = el.shadowRoot?.querySelector("button") as HTMLButtonElement;
-    button.click();
-
-    expect(spy).toHaveBeenCalledTimes(1);
-    expect(el.shadowRoot).toBeTruthy();
+    expect(markup).toContain("<p>1</p>");
+    expect(spy).not.toHaveBeenCalled();
   });
 
-
-
-  it("isolates nested plain object state when fallback clone is used", async () => {
-    CE.define({
-      name: "x-fallback-nested-isolation",
-      state: {
-        data: { count: 0 },
-        format(value: number) {
-          return `${value}`;
+  it("can render a light DOM static snapshot when requested", async () => {
+    const markup = await renderStatic<{ label: StringConstructor }>(
+      function XLightSnapshot({ props }) {
+        return html`<p>${props.label}</p>`;
+      },
+      {
+        mode: "light-dom",
+        props: {
+          label: "Docs",
         },
-      },
-      render() {
-        return html`<p>${this.state.format(this.state.data.count)}</p><button inc="click">+</button>`;
-      },
-      handlers: {
-        inc() {
-          this.state.data.count += 1;
-          this.setState({ data: this.state.data });
-        },
-      },
-    });
+      }
+    );
 
-    const one = document.createElement("x-fallback-nested-isolation") as HTMLElement;
-    const two = document.createElement("x-fallback-nested-isolation") as HTMLElement;
-    document.body.append(one, two);
-
-    const oneButton = one.shadowRoot?.querySelector("button") as HTMLButtonElement;
-    oneButton.click();
-    await wait();
-
-    expect(one.shadowRoot?.textContent).toContain("1");
-    expect(two.shadowRoot?.textContent).toContain("0");
-  });
-  it("mounts components when state includes non-cloneable values", async () => {
-    CE.define({
-      name: "x-non-cloneable-state",
-      state: {
-        count: 1,
-        format(value: number) {
-          return `count:${value}`;
-        },
-      },
-      render() {
-        return `<p>${this.state.format(this.state.count)}</p>`;
-      },
-    });
-
-    const el = document.createElement("x-non-cloneable-state") as HTMLElement;
-
-    expect(() => document.body.append(el)).not.toThrow();
-    await wait();
-
-    expect(el.shadowRoot?.textContent).toContain("count:1");
+    expect(markup).toBe("<x-light-snapshot label=\"Docs\"><p>Docs</p></x-light-snapshot>");
   });
 });

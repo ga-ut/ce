@@ -1,0 +1,31 @@
+      <article class="doc-page">
+        <h2>Components</h2>
+        <p>CE components are custom elements with a compact setup surface. They keep rendering, state, props, lifecycle cleanup, and handlers together.</p>
+
+        <h3>Naming</h3>
+        <p>The function name is converted to a custom element tag. This keeps the registration point short and avoids duplicating the tag string.</p>
+        <pre><code>define(function UserMenu() {
+  return html`&lt;button&gt;Account&lt;/button&gt;`;
+});
+
+// Registers &lt;user-menu&gt;</code></pre>
+
+        <h3>Props</h3>
+        <p>Props are declared beside the component and parsed from attributes. Use them for initial values and external configuration.</p>
+        <pre><code>define(function PriceLabel({ props }) {
+  return html`&lt;span&gt;${props.currency} ${props.amount}&lt;/span&gt;`;
+}, {
+  props: {
+    currency: String,
+    amount: Number
+  }
+});</code></pre>
+
+        <h3>State</h3>
+        <p>Signals are for local mutable values. Derived signals compute from other signals and update their rendered positions without rerunning unrelated DOM.</p>
+        <pre><code>const count = signal(1);
+const doubled = derived(() =&gt; count() * 2);</code></pre>
+
+        <h3>Cleanup</h3>
+        <p>Use lifecycle cleanup for timers, observers, subscriptions, and request cancellation. Cleanup runs when the element disconnects.</p>
+      </article>

@@ -20,6 +20,8 @@ const globalKeys = [
   "Element",
   "Event",
   "EventTarget",
+  "MouseEvent",
+  "FocusEvent",
   "MutationObserver",
 ];
 
@@ -65,7 +67,7 @@ test.after(async () => {
   }
 });
 
-test("handlers are called once after three rerenders", async () => {
+test("inline handlers are called once after structural rerenders", async () => {
   const dom = new JSDOM("<!doctype html><body></body>", {
     url: "http://localhost/",
   });
@@ -73,35 +75,30 @@ test("handlers are called once after three rerenders", async () => {
   installDomGlobals(dom);
 
   try {
-    const { CE } = await import(moduleUrl);
+    const { define, html, signal } = await import(moduleUrl);
 
-    const tagName = `event-rerender-${Date.now()}`;
-    const calls = { click: 0 };
+    let calls = 0;
 
-    CE.define({
-      name: tagName,
-      state: { count: 0 },
-      render() {
-        return `<button increment="click">increment</button><span>${this.state.count}</span>`;
-      },
-      handlers: {
-        increment() {
-          calls.click += 1;
-        },
-      },
+    define(function EventRerender() {
+      const count = signal(0);
+
+      return () => html`
+        <button onclick=${() => {
+          calls += 1;
+          count.update((value) => value + 1);
+        }}>increment</button>
+        <span>${count()}</span>
+      `;
     });
 
-    const element = document.createElement(tagName);
+    const element = document.createElement("event-rerender");
     document.body.append(element);
-
-    element.setState({ count: 1 });
-    element.setState({ count: 2 });
-    element.setState({ count: 3 });
 
     const button = element.shadowRoot.querySelector("button");
     button.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true, composed: true }));
+    button.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true, composed: true }));
 
-    assert.equal(calls.click, 1);
+    assert.equal(calls, 2);
   } finally {
     restoreDomGlobals();
     dom.window.close();
@@ -116,35 +113,29 @@ test("non-bubbling focus handlers still fire after rerenders", async () => {
   installDomGlobals(dom);
 
   try {
-    const { CE } = await import(moduleUrl);
+    const { define, html, signal } = await import(moduleUrl);
 
-    const tagName = `event-focus-${Date.now()}`;
-    const calls = { focus: 0 };
+    let calls = 0;
 
-    CE.define({
-      name: tagName,
-      state: { count: 0 },
-      render() {
-        return `<input onFocus="focus" /><span>${this.state.count}</span>`;
-      },
-      handlers: {
-        onFocus() {
-          calls.focus += 1;
-        },
-      },
+    define(function EventFocus() {
+      const count = signal(0);
+
+      return () => html`
+        <input onfocus=${() => {
+          calls += 1;
+          count.update((value) => value + 1);
+        }} />
+        <span>${count()}</span>
+      `;
     });
 
-    const element = document.createElement(tagName);
+    const element = document.createElement("event-focus");
     document.body.append(element);
-
-    element.setState({ count: 1 });
-    element.setState({ count: 2 });
-    element.setState({ count: 3 });
 
     const input = element.shadowRoot.querySelector("input");
     input.dispatchEvent(new dom.window.FocusEvent("focus", { composed: true }));
 
-    assert.equal(calls.focus, 1);
+    assert.equal(calls, 1);
   } finally {
     restoreDomGlobals();
     dom.window.close();

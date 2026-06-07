@@ -14,7 +14,6 @@ const siteFiles = [
   'docs/site/roadmap.html',
   'docs/site/api.html',
   'docs/site/release.html',
-  'docs/site/assets/app.js',
 ];
 
 const expectedLinks = [
@@ -27,7 +26,7 @@ const filesWithReferenceLinks = [
   'docs/site/usage.html',
   'docs/site/components.html',
   'docs/site/roadmap.html',
-  'docs/site/assets/app.js',
+  'docs/site/release.html',
 ];
 
 test('pages docs references use internal HTML doc pages', async () => {
@@ -50,4 +49,13 @@ test('pages docs references use internal HTML doc pages', async () => {
       assert.match(content, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     }
   }
+});
+
+test('usage docs include generated declarative shadow DOM snapshots', async () => {
+  const content = await readFile(path.join(repoRoot, 'docs/site/usage.html'), 'utf8');
+
+  assert.doesNotMatch(content, /CE_STATIC:/);
+  assert.match(content, /<product-badge label="In stock"><template shadowrootmode="open">/);
+  assert.match(content, /<button>\s*In stock\s*<\/button>/);
+  assert.doesNotMatch(content, /data-ce-event|data-ce-signal/);
 });

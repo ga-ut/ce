@@ -1,0 +1,44 @@
+      <article class="doc-page">
+        <h2>Usage</h2>
+        <p>Use CE when a small custom element needs local state, scoped rendering, and direct event handling without a larger app framework.</p>
+
+        <h3>Install the web runtime</h3>
+        <p>Browser-facing components import named helpers from the web entrypoint. The package root stays core-only.</p>
+        <pre><code>import { define, html, signal, derived, match } from "@ga-ut/ce/web";</code></pre>
+
+        <h3>Define a component</h3>
+        <p>The component function owns setup and render. A function named <code>ProductBadge</code> registers the <code>product-badge</code> custom element.</p>
+        <pre><code>define(function ProductBadge({ props }) {
+  const selected = signal(false);
+  const label = derived(() =&gt; selected() ? "Selected" : props.label);
+
+  return html`
+    &lt;button onclick=${() =&gt; selected.update((value) =&gt; !value)}&gt;
+      ${label}
+    &lt;/button&gt;
+  `;
+}, {
+  props: {
+    label: String
+  }
+});</code></pre>
+
+        <h3>Render it in HTML</h3>
+        <p>Once defined, the element is used like any other custom element. Props are read from attributes and converted by the declared prop type.</p>
+        <pre><code>&lt;product-badge label="In stock"&gt;&lt;/product-badge&gt;</code></pre>
+
+        <h3>Generated static snapshot</h3>
+        <p>The docs build runs the component once at build time and emits Declarative Shadow DOM without a headless browser.</p>
+        <!-- CE_STATIC:product-badge -->
+
+        <h3>Handle async states explicitly</h3>
+        <p>Keep loading, success, and failure visible in render code. This makes state transitions easier to review and test.</p>
+        <pre><code>const result = signal({ phase: "loading", data: null, error: null });
+
+return html`
+  ${match(result())
+    .when((state) =&gt; state.phase === "loading", () =&gt; html`&lt;p&gt;Loading&lt;/p&gt;`)
+    .when((state) =&gt; state.phase === "success", ({ data }) =&gt; html`&lt;p&gt;${data.title}&lt;/p&gt;`)
+    .otherwise(({ error }) =&gt; html`&lt;p&gt;${error?.message ?? "Failed"}&lt;/p&gt;`)}
+`;</code></pre>
+      </article>

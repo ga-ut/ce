@@ -9,8 +9,10 @@
 2. `npm run lint`
 3. `npm run test`
 4. `npm run build`
-5. `npm run pack:check` (`packages/ce` workspace `npm pack --dry-run`)
-6. Confirm the document status board data was refreshed (or explicitly marked as no-change) for this release.
+5. `npm run test:events`
+6. `npm run docs:build`
+7. `npm run docs:validate`
+8. `npm run pack:check` (`packages/ce` workspace `npm pack --dry-run`)
 
 ## Publish
 - Public package: `cd packages/ce && npm publish --access public`
@@ -22,18 +24,22 @@ Must include:
 - Migration guide
 - Affected API list
 
-### Migration checklist (v2.0.0)
-1. Replace all root imports:
-   - Before: `import { CE, html } from "@ga-ut/ce";`
-   - After: `import { CE, html } from "@ga-ut/ce/web";`
-2. Confirm no package consumer imports web runtime APIs from `@ga-ut/ce` root.
-3. Run validation gates in this repository before publish.
+### Initial publish checklist (v0.1.0)
+1. Confirm the package has not already been published:
+   - `npm view @ga-ut/ce version`
+2. Confirm consumers use named web-runtime imports:
+   - `import { define, html, signal } from "@ga-ut/ce/web";`
+3. Confirm consumers do not use legacy object definitions.
+4. Use `ce-cli build --entry ./pages.mjs --out ./dist` for static page generation when a site is built from CE page components.
+5. Publish from a matching `v0.1.0` tag only.
+6. Run validation gates in this repository before publish.
 
 ## Post-release smoke test
 Validate with sample app:
 - Route transitions
 - State updates
 - Event handling
+- Static page generation through `ce-cli`
 
 Also confirm the published Pages status board shows the latest status dataset timestamp.
 

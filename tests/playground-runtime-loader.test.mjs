@@ -16,14 +16,7 @@ const expectedWebCandidates = [
   '../../dist/web/index.mjs',
 ];
 
-const expectedRootFallbackCandidates = [
-  '../../packages/ce/dist/index.mjs',
-  './dist/index.mjs',
-  '../dist/index.mjs',
-  '../../dist/index.mjs',
-];
-
-test('playground runtime loader prioritizes web entrypoint with root fallback', async () => {
+test('playground runtime loader uses the web entrypoint named API', async () => {
   const content = await readFile(playgroundScriptPath, 'utf8');
 
   for (const candidate of expectedWebCandidates) {
@@ -34,27 +27,13 @@ test('playground runtime loader prioritizes web entrypoint with root fallback', 
     );
   }
 
-  for (const candidate of expectedRootFallbackCandidates) {
-    assert.match(
-      content,
-      new RegExp(candidate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
-      `Expected root fallback runtime candidate "${candidate}" to exist in playground loader.`
-    );
-  }
-
-  const firstWebCandidateOffset = content.indexOf(expectedWebCandidates[0]);
-  const firstRootFallbackCandidateOffset = content.indexOf(expectedRootFallbackCandidates[0]);
-
-  assert.notEqual(firstWebCandidateOffset, -1, 'Web candidate must exist in loader source.');
-  assert.notEqual(firstRootFallbackCandidateOffset, -1, 'Root fallback candidate must exist in loader source.');
-  assert.ok(
-    firstWebCandidateOffset < firstRootFallbackCandidateOffset,
-    'Web candidate list must appear before root fallback candidates.'
-  );
+  assert.doesNotMatch(content, /dist\/index\.mjs/);
+  assert.doesNotMatch(content, /__PLAYGROUND_CE_RUNTIME__/);
+  assert.doesNotMatch(content, /__PLAYGROUND_CE_MATCH__/);
 
   assert.match(
     content,
-    /window\.__PLAYGROUND_CE_RUNTIME__ = \{ CE, html \};/,
-    'Playground runtime bootstrap assignment must remain unchanged.'
+    /window\.__PLAYGROUND_CE_API__ = \{ define, html, signal, derived, effect, match \};/,
+    'Playground runtime bootstrap must expose the named web API.'
   );
 });

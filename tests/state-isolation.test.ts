@@ -1,28 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { CE, html } from "../packages/ce/src/web";
+import { define, html, signal } from "../packages/ce/src/web";
 
-describe("CE state isolation", () => {
-  it("does not leak state updates between component instances", async () => {
-    const tagName = "test-counter-isolation";
+describe("CE signal isolation", () => {
+  it("does not leak signal updates between component instances", async () => {
+    define(function TestCounterIsolation() {
+      const count = signal(0);
 
-    if (!customElements.get(tagName)) {
-      CE.define({
-        name: tagName,
-        state: { count: 0 },
-        render() {
-          return html`<div class="value">${String(this.state.count)}</div>
-            <button inc="click">+</button>`;
-        },
-        handlers: {
-          inc() {
-            this.setState({ count: this.state.count + 1 });
-          },
-        },
-      });
-    }
+      return html`<div class="value">${count}</div>
+        <button onclick=${() => count.update((value) => value + 1)}>+</button>`;
+    });
 
-    const first = document.createElement(tagName) as HTMLElement;
-    const second = document.createElement(tagName) as HTMLElement;
+    const first = document.createElement("test-counter-isolation") as HTMLElement;
+    const second = document.createElement("test-counter-isolation") as HTMLElement;
 
     document.body.append(first, second);
 

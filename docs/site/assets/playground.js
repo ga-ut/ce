@@ -1,25 +1,17 @@
 const PLAYGROUND_IS_WORKSPACE_DOCS_PATH = window.location.pathname.includes('/docs/site/');
-// Prefer the canonical workspace build output first; keep root dist paths as compatibility bridges.
+// Prefer the canonical workspace web build output first.
 const DIST_MODULE_PATH_CANDIDATES = PLAYGROUND_IS_WORKSPACE_DOCS_PATH
   ? [
       '../../packages/ce/dist/web/index.mjs',
       '../../dist/web/index.mjs',
       '../dist/web/index.mjs',
       './dist/web/index.mjs',
-      '../../packages/ce/dist/index.mjs',
-      '../../dist/index.mjs',
-      '../dist/index.mjs',
-      './dist/index.mjs',
     ]
   : [
       './dist/web/index.mjs',
       '../dist/web/index.mjs',
       '../../dist/web/index.mjs',
       '../../packages/ce/dist/web/index.mjs',
-      './dist/index.mjs',
-      '../dist/index.mjs',
-      '../../dist/index.mjs',
-      '../../packages/ce/dist/index.mjs',
     ];
 
 let ceRuntimeModuleSourcePromise;
@@ -28,7 +20,7 @@ const PLAYGROUND_PRESETS = {
   basic: {
     label: 'Basic HTML/CSS/JS',
     source: {
-      html: `<section class="demo-card">\n  <h1>CE Playground</h1>\n  <p>아래 버튼을 눌러 상태를 바꿔보세요.</p>\n  <button id="demo-btn" type="button">Click me</button>\n  <p id="demo-status">Ready</p>\n</section>`,
+      html: `<section class="demo-card">\n  <h1>CE Playground</h1>\n  <p>Press the button to update local state.</p>\n  <button id="demo-btn" type="button">Click me</button>\n  <p id="demo-status">Ready</p>\n</section>`,
       css: `:root {\n  font-family: Inter, system-ui, sans-serif;\n}\n\nbody {\n  margin: 0;\n  padding: 1rem;\n  background: #f8fafc;\n}\n\n.demo-card {\n  background: white;\n  border: 1px solid #e5e7eb;\n  border-radius: 10px;\n  padding: 1rem;\n}\n\nbutton {\n  border: 1px solid #2563eb;\n  background: #2563eb;\n  color: #fff;\n  border-radius: 8px;\n  padding: 0.45rem 0.75rem;\n}`,
       js: `const button = document.querySelector('#demo-btn');\nconst status = document.querySelector('#demo-status');\n\nbutton?.addEventListener('click', () => {\n  status.textContent = 'Clicked at ' + new Date().toLocaleTimeString();\n});`,
     },
@@ -41,7 +33,7 @@ const PLAYGROUND_PRESETS = {
       js: `(async () => {\n  const { define, html, signal } = window.__PLAYGROUND_CE_API__ ?? {};
   if (!(define && html && signal)) {
     throw new Error('CE runtime is unavailable in playground preview.');
-  }\n\n  define(function CeCounter() {\n    const count = signal(0);\n\n    return html\`\n      <style>\n        .card {\n          background: #fff;\n          border: 1px solid #e5e7eb;\n          border-radius: 12px;\n          padding: 1rem;\n          display: grid;\n          gap: 0.6rem;\n        }\n\n        button {\n          width: fit-content;\n          border: 1px solid #2563eb;\n          background: #2563eb;\n          color: #fff;\n          border-radius: 8px;\n          padding: 0.45rem 0.75rem;\n          cursor: pointer;\n        }\n\n        .count {\n          font-weight: 700;\n          color: #1f2937;\n        }\n      </style>\n      <section class="card">\n        <h2>CE Counter (Shadow DOM)</h2>\n        <p>Count: <span class="count">\${count}</span></p>\n        <button onclick=\${() => count.update((value) => value + 1)} type="button">Increment</button>\n        <p class="note">함수 이름 CeCounter가 ce-counter 태그로 등록됩니다.</p>\n      </section>\n    \`;\n  });\n})();`,
+  }\n\n  define(function CeCounter() {\n    const count = signal(0);\n\n    return html\`\n      <style>\n        .card {\n          background: #fff;\n          border: 1px solid #e5e7eb;\n          border-radius: 12px;\n          padding: 1rem;\n          display: grid;\n          gap: 0.6rem;\n        }\n\n        button {\n          width: fit-content;\n          border: 1px solid #2563eb;\n          background: #2563eb;\n          color: #fff;\n          border-radius: 8px;\n          padding: 0.45rem 0.75rem;\n          cursor: pointer;\n        }\n\n        .count {\n          font-weight: 700;\n          color: #1f2937;\n        }\n      </style>\n      <section class="card">\n        <h2>CE Counter (Shadow DOM)</h2>\n        <p>Count: <span class="count">\${count}</span></p>\n        <button onclick=\${() => count.update((value) => value + 1)} type="button">Increment</button>\n        <p class="note">The function name CeCounter registers the ce-counter tag.</p>\n      </section>\n    \`;\n  });\n})();`,
     },
   },
   fine: {
@@ -637,7 +629,7 @@ function buildPreviewDocument({ html, css, js, runtimeModuleSource = '' }) {
   const safeJs = escapeScriptContent(js);
   const safeRuntime = escapeScriptContent(runtimeModuleSource);
   const runtimeBootstrap = safeRuntime
-    ? `<script type="module">\n${safeRuntime}\nwindow.__PLAYGROUND_CE_RUNTIME__ = { CE, html };\nwindow.__PLAYGROUND_CE_MATCH__ = match;\nwindow.__PLAYGROUND_CE_API__ = { define, html, signal, derived, effect, match };\n<\/script>`
+    ? `<script type="module">\n${safeRuntime}\nwindow.__PLAYGROUND_CE_API__ = { define, html, signal, derived, effect, match };\n<\/script>`
     : '';
 
   return `<!doctype html>

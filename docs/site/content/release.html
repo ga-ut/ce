@@ -1,0 +1,50 @@
+      <article class="doc-page">
+        <h2>Release, Verification, and Rollback</h2>
+        <p>Use this page before tagging a release or publishing the package. It separates runtime validation, package checks, and post-release safety work.</p>
+
+        <h3>CI gate</h3>
+        <p>Tag a release only when <code>lint + test + build</code> pass.</p>
+
+        <h3>Pre-publish verification</h3>
+        <ol>
+          <li><code>bun install</code></li>
+          <li><code>npm run lint</code></li>
+          <li><code>npm run test</code></li>
+          <li><code>npm run build</code></li>
+          <li><code>npm run test:events</code></li>
+          <li><code>npm run docs:build</code></li>
+          <li><code>npm run docs:validate</code></li>
+          <li><code>npm run pack:check</code></li>
+        </ol>
+
+        <h3>Publish</h3>
+        <p>Publish from <code>packages/ce</code> with <code>npm publish --access public</code>. Organization policy can override access mode.</p>
+
+        <h3>Release notes</h3>
+        <ul>
+          <li>Breaking changes</li>
+          <li>Migration guide</li>
+          <li>Affected API list</li>
+        </ul>
+
+        <h4>Initial publish checklist for v0.1.0</h4>
+        <ol>
+          <li>Confirm <code>npm view @ga-ut/ce version</code> does not find an existing published package.</li>
+          <li>Use named web-runtime imports such as <code>import { define, html, signal } from "@ga-ut/ce/web";</code>.</li>
+          <li>Confirm consumers do not use legacy object definitions.</li>
+          <li>Use <code>ce-cli build --entry ./pages.mjs --out ./dist</code> for CE-based static sites.</li>
+          <li>Publish from a matching <code>v0.1.0</code> tag only.</li>
+        </ol>
+
+        <h3>Post-release smoke test</h3>
+        <ul>
+          <li>Route transitions</li>
+          <li>State updates</li>
+          <li>Event handling</li>
+          <li>Static page generation through <code>ce-cli</code></li>
+          <li>Published Pages status board timestamp</li>
+        </ul>
+
+        <h3>Rollback safety</h3>
+        <p>If an issue is found, publish an immediate patch release with the fix and keep the rollback playbook in the release PR.</p>
+      </article>

@@ -1,101 +1,58 @@
-import { CE, html } from "../../packages/ce/src/web";
+import { define, html, navigate, setEntryPoint, signal } from "../../packages/ce/src/web";
 
-const createCountState = () => ({
-  count: 0,
+define(function CounterButtonGroup({ host }) {
+  const dispatch = (type: string) => {
+    host.dispatchEvent(
+      new CustomEvent(type, {
+        bubbles: true,
+        composed: true,
+      })
+    );
+  };
+
+  return html`<div>
+    <button onclick=${() => dispatch("increment")}>+</button>
+    <button onclick=${() => dispatch("decrement")}>-</button>
+  </div>`;
 });
 
-const createUserState = () => ({
-  users: ["test1", "test2", "test3"],
+define(function UserInfo() {
+  const users = ["test1", "test2", "test3"];
+
+  return html`<div>
+    ${users.map((user) => html`<div>${user}</div>`)}
+  </div>`;
 });
 
-CE.define({
-  name: "counter-button-group",
-  state: {},
-  render() {
-    return html` <div>
-      <button increment="click">+</button>
-      <button decrement="click">-</button>
-    </div>`;
-  },
-  handlers: {
-    increment() {
-      this.dispatchEvent(
-        new CustomEvent("increment", {
-          bubbles: true,
-          composed: true,
-        })
-      );
-    },
-    decrement() {
-      this.dispatchEvent(
-        new CustomEvent("decrement", {
-          bubbles: true,
-          composed: true,
-        })
-      );
-    },
-  },
-});
+define(
+  function MainApp() {
+    const count = signal(0);
 
-CE.define({
-  name: "user-info",
-  state: createUserState(),
-  render() {
-    return html`<div>
-      ${this.state.users.reduce((result, user) => {
-        return result + html` <div>${user}</div> `;
-      }, "")}
-    </div>`;
-  },
-});
-
-CE.define({
-  name: "main-app",
-  state: createCountState(),
-  route: "/",
-  render() {
     return html`
       <nav>
-        <button toUsers="click">View users</button>
+        <button onclick=${() => navigate("#/users")}>View users</button>
       </nav>
-      <div count>Count: ${this.bind("count")} times</div>
+      <div>Count: ${count} times</div>
       <counter-button-group
-        increment="increment"
-        decrement="decrement"
+        onincrement=${() => count.update((value) => value + 1)}
+        ondecrement=${() => count.update((value) => value - 1)}
       ></counter-button-group>
     `;
   },
-  handlers: {
-    increment() {
-      this.setState({ count: this.state.count + 1 });
-    },
-    decrement() {
-      this.setState({ count: this.state.count - 1 });
-    },
-    toUsers() {
-      CE.navigate("#/users");
-    },
-  },
-});
+  { route: "/" }
+);
 
-CE.define({
-  name: "users-page",
-  state: createUserState(),
-  route: "/users",
-  render() {
+define(
+  function UsersPage() {
     return html`
       <nav>
-        <button toHome="click">Back to home</button>
+        <button onclick=${() => navigate("#/")}>Back to home</button>
       </nav>
       <user-info></user-info>
     `;
   },
-  handlers: {
-    toHome() {
-      CE.navigate("#/");
-    },
-  },
-});
+  { route: "/users" }
+);
 
 const mountApp = () => {
   const existingRoot = document.querySelector<HTMLElement>("[data-ce-playground-root]");
@@ -111,7 +68,7 @@ const mountApp = () => {
     window.location.hash = "#/";
   }
 
-  CE.setEntryPoint("ce-playground-root", {
+  setEntryPoint("ce-playground-root", {
     rootElement: root,
     hydrate: false,
   });

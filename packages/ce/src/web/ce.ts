@@ -1,13 +1,6 @@
 export type Template = HTMLTemplateElement;
 export type RenderContent = string | Template;
 
-export type BindToken<T> = {
-  __ce_bind: true;
-  ownerId: string;
-  key: keyof T;
-  content: T[keyof T];
-};
-
 export type Signal<T> = {
   readonly __ce_signal: true;
   (): T;
@@ -42,12 +35,6 @@ type InferProps<T extends PropsDefinition | undefined> =
       }
     : Record<string, never>;
 
-type SetupContext<P extends PropsDefinition | undefined> = {
-  props: InferProps<P>;
-  signal: typeof CE.signal;
-  derived: typeof CE.derived;
-};
-
 type Lifecycle = {
   connected: (callback: () => void) => void;
   cleanup: (callback: () => void) => void;
@@ -60,78 +47,385 @@ type FunctionDefineContext<P extends PropsDefinition | undefined> = {
   lifecycle: Lifecycle;
 };
 
-type FunctionDefineOptions<P extends PropsDefinition | undefined = undefined> = {
+export type DefineOptions<P extends PropsDefinition | undefined = undefined> = {
   props?: P;
   route?: string;
   preload?: (path: string) => Promise<void>;
   onError?: (error: unknown) => string;
 };
 
-type FunctionComponent<P extends PropsDefinition | undefined = undefined> = (
+export type RenderStaticOptions<P extends PropsDefinition | undefined = undefined> = {
+  props?: Partial<InferProps<P>>;
+  tag?: string;
+  attributes?: false | Record<string, unknown>;
+  mode?: "declarative-shadow-dom" | "light-dom";
+};
+
+export type FunctionComponent<P extends PropsDefinition | undefined = undefined> = (
   context: FunctionDefineContext<P>
 ) =>
   | RenderContent
   | Promise<RenderContent>
   | (() => RenderContent | Promise<RenderContent>);
 
-type MatchPredicate<T> = (value: T) => boolean;
-type MatchHandler<T, R> = (value: T) => R;
-
-type HtmlValue<T> =
-  | string
-  | number
-  | boolean
-  | EventListener
-  | BindToken<T>
-  | Signal<unknown>
-  | HtmlValue<T>[]
-  | null
-  | undefined;
-
-type CEInstance<T, K> = HTMLElement & {
-  state: T;
-  props: Record<string, unknown>;
-  lifecycle: Lifecycle;
-  setState: (newState: Partial<T>) => void;
-  bind: (key: keyof T) => BindToken<T>;
-  handlers?: K;
-  [key: string]: any;
-};
-
-type CEHandlers<T> = {
-  [key: string]: (this: CEInstance<T, any>) => void;
-};
-
-export type DefineParams<
-  T extends Record<string, any>,
-  K extends CEHandlers<T>,
-  P extends PropsDefinition | undefined = undefined
-> = {
-  name: string;
-  state: T;
-  props?: P;
-  route?: string;
-  preload?: (path: string) => Promise<void>;
-  onError?: (error: unknown) => string;
-  onConnect?: (this: CEInstance<T, K>) => void;
-  onDisconnect?: (this: CEInstance<T, K>) => void;
-  onAdopt?: (this: CEInstance<T, K>) => void;
-  onAttributeChange?: (
-    this: CEInstance<T, K>,
-    name: string,
-    oldValue: string | null,
-    newValue: string | null
-  ) => void;
-  setup?: (this: CEInstance<T, K>, context: SetupContext<P>) => Record<string, any>;
-  render: (this: CEInstance<T, K>) => RenderContent | Promise<RenderContent>;
-  handlers?: K;
-  [key: string]: any;
-};
-
 type RouteDefinition = {
   component: string;
   preload?: (path: string) => Promise<void>;
   onError?: (error: unknown) => string;
+};
+
+type ComponentDefinition<P extends PropsDefinition | undefined = PropsDefinition | undefined> = {
+  name: string;
+  component: FunctionComponent<P>;
+  props?: P;
+};
+
+type MatchPredicate<T> = (value: T) => boolean;
+type MatchHandler<T, R> = (value: T) => R;
+
+type HtmlValue =
+  | string
+  | number
+  | boolean
+  | EventListener
+  | Signal<unknown>
+  | HtmlValue[]
+  | null
+  | undefined;
+
+type HtmlRenderContext = {
+  eventHandlers: EventListener[];
+  signals: Array<Signal<unknown>>;
+  dependencies: Set<Signal<unknown>>;
+  hasUnslottedDynamic: boolean;
+  staticSnapshot: boolean;
+};
+
+let activeSignalCollector: Set<Signal<unknown>> | null = null;
+let activeLifecycleOwner: Lifecycle | null = null;
+let activeHtmlRenderContext: HtmlRenderContext | null = null;
+let activeStaticSnapshot = false;
+
+const MUTATING_ARRAY_METHODS = new Set([
+  "copyWithin",
+  "fill",
+  "pop",
+  "push",
+  "reverse",
+  "shift",
+  "sort",
+  "splice",
+  "unshift",
+]);
+
+const isPlainObject = (value: unknown): value is Record<PropertyKey, unknown> => {
+  if (typeof value !== "object" || value === null) return false;
+
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null || Array.isArray(value);
+};
+
+const createReactiveValue = <T>(
+  value: T,
+  notify: () => void,
+  seen = new WeakMap<object, unknown>()
+): T => {
+  if (!isPlainObject(value)) return value;
+
+  const objectValue = value as Record<PropertyKey, unknown>;
+  if (seen.has(objectValue)) return seen.get(objectValue) as T;
+
+  const proxy = new Proxy(objectValue, {
+    get(target, property, receiver) {
+      const current = Reflect.get(target, property, receiver);
+
+      if (
+        Array.isArray(target) &&
+        typeof property === "string" &&
+        MUTATING_ARRAY_METHODS.has(property) &&
+        typeof current === "function"
+      ) {
+        return (...args: unknown[]) => {
+          const result = current.apply(target, args);
+          notify();
+          return result;
+        };
+      }
+
+      return current;
+    },
+    set(target, property, nextValue, receiver) {
+      const previousValue = target[property];
+      if (Object.is(previousValue, nextValue)) return true;
+
+      const result = Reflect.set(
+        target,
+        property,
+        createReactiveValue(nextValue, notify, seen),
+        receiver
+      );
+      notify();
+      return result;
+    },
+    deleteProperty(target, property) {
+      if (!(property in target)) return true;
+
+      const result = Reflect.deleteProperty(target, property);
+      notify();
+      return result;
+    },
+  });
+
+  seen.set(objectValue, proxy);
+
+  for (const key of Object.keys(objectValue)) {
+    objectValue[key] = createReactiveValue(objectValue[key], notify, seen);
+  }
+
+  return proxy as T;
+};
+
+const createSignal = <T>(initialValue: T): Signal<T> => {
+  const listeners = new Set<(value: T) => void>();
+  let currentValue: T;
+
+  const notify = () => {
+    for (const listener of Array.from(listeners)) {
+      listener(currentValue);
+    }
+  };
+
+  const signal = (() => {
+    activeSignalCollector?.add(signal as Signal<unknown>);
+    return currentValue;
+  }) as Signal<T>;
+
+  const setValue = (nextValue: T) => {
+    if (Object.is(currentValue, nextValue)) return;
+
+    currentValue = createReactiveValue(nextValue, notify);
+    notify();
+  };
+
+  Object.defineProperties(signal, {
+    __ce_signal: {
+      value: true,
+    },
+    value: {
+      get() {
+        activeSignalCollector?.add(signal as Signal<unknown>);
+        return currentValue;
+      },
+      set(nextValue: T) {
+        setValue(nextValue);
+      },
+    },
+  });
+
+  signal.set = setValue;
+  signal.update = (updater) => {
+    setValue(updater(currentValue));
+  };
+  signal.subscribe = (listener) => {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+  };
+  signal.toString = () => String(currentValue ?? "");
+  signal.valueOf = () => currentValue as any;
+
+  currentValue = createReactiveValue(initialValue, notify);
+
+  return signal;
+};
+
+const isSignal = (value: unknown): value is Signal<unknown> =>
+  typeof value === "function" &&
+  value !== null &&
+  "__ce_signal" in value;
+
+const peekSignal = <T>(signal: Signal<T>) => {
+  const previousCollector = activeSignalCollector;
+  activeSignalCollector = null;
+
+  try {
+    return signal.value;
+  } finally {
+    activeSignalCollector = previousCollector;
+  }
+};
+
+export function effect(callback: () => EffectCleanup) {
+  if (activeStaticSnapshot) return () => {};
+
+  let cleanup: EffectCleanup;
+  let dependencyCleanups: Array<() => void> = [];
+  let disposed = false;
+
+  const run = () => {
+    if (disposed) return;
+
+    if (typeof cleanup === "function") cleanup();
+    for (const dependencyCleanup of dependencyCleanups) dependencyCleanup();
+    dependencyCleanups = [];
+
+    const dependencies = new Set<Signal<unknown>>();
+    const previousCollector = activeSignalCollector;
+    activeSignalCollector = dependencies;
+
+    try {
+      cleanup = callback();
+    } finally {
+      activeSignalCollector = previousCollector;
+    }
+
+    for (const dependency of dependencies) {
+      dependencyCleanups.push(dependency.subscribe(run));
+    }
+  };
+
+  run();
+
+  const dispose = () => {
+    disposed = true;
+    if (typeof cleanup === "function") cleanup();
+    for (const dependencyCleanup of dependencyCleanups) dependencyCleanup();
+    dependencyCleanups = [];
+  };
+
+  activeLifecycleOwner?.cleanup(dispose);
+
+  return dispose;
+}
+
+const createDerived = <T>(compute: () => T): Signal<T> => {
+  if (activeStaticSnapshot) {
+    return createSignal(compute());
+  }
+
+  const derived = createSignal(undefined as T);
+
+  effect(() => {
+    derived.set(compute());
+  });
+
+  return derived;
+};
+
+const createHtmlRenderContext = (): HtmlRenderContext => ({
+  eventHandlers: [],
+  signals: [],
+  dependencies: new Set(),
+  hasUnslottedDynamic: false,
+  staticSnapshot: false,
+});
+
+const withHtmlRenderContext = <T>(
+  callback: () => T,
+  options?: { staticSnapshot?: boolean }
+) => {
+  const previousHtmlContext = activeHtmlRenderContext;
+  const previousCollector = activeSignalCollector;
+  const context = createHtmlRenderContext();
+  context.staticSnapshot = options?.staticSnapshot ?? false;
+  activeHtmlRenderContext = context;
+  activeSignalCollector = context.dependencies;
+
+  try {
+    return {
+      value: callback(),
+      context,
+    };
+  } finally {
+    activeHtmlRenderContext = previousHtmlContext;
+    activeSignalCollector = previousCollector;
+  }
+};
+
+const getEventAttributeName = (staticSegment: string) => {
+  const match = staticSegment.match(/(\s)(on[a-z][\w:-]*)\s*=\s*$/i);
+  if (!match) return null;
+
+  return {
+    eventName: match[2].slice(2).toLowerCase(),
+    staticPrefix: staticSegment.slice(0, -match[0].length) + match[1],
+  };
+};
+
+const getDynamicAttributeName = (staticSegment: string) => {
+  const match = staticSegment.match(/(\s)([\w:-]+)\s*=\s*["']?$/);
+  if (!match) return null;
+
+  return {
+    attributeName: match[2],
+    staticPrefix: staticSegment.slice(0, -match[0].length) + match[1],
+  };
+};
+
+const isAttributeInterpolation = (staticSegment: string) =>
+  /[\w:-]+\s*=\s*["']?$/.test(staticSegment);
+
+const toHtmlString = (content: RenderContent): string => {
+  if (typeof content === "string") return content;
+
+  return content.innerHTML;
+};
+
+const escapeHtml = (value: unknown) =>
+  String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+const escapeAttribute = (value: unknown) =>
+  escapeHtml(value).replace(/"/g, "&quot;");
+
+const toKebabCase = (value: string) =>
+  value
+    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+    .replace(/([A-Z])([A-Z][a-z])/g, "$1-$2")
+    .toLowerCase();
+
+const inferComponentName = (component: Function) => {
+  const tagName = toKebabCase(component.name);
+
+  if (!component.name || !tagName.includes("-")) {
+    throw new Error(
+      "define() requires a named multi-word function. Example: define(function MyCounter() { ... })"
+    );
+  }
+
+  return tagName;
+};
+
+const getPropAttributeName = (propName: string) => toKebabCase(propName);
+
+const parsePropValue = (
+  host: HTMLElement,
+  propName: string,
+  definition: PropDefinition
+) => {
+  const attributeName = getPropAttributeName(propName);
+  const attributeValue =
+    host.getAttribute(attributeName) ?? host.getAttribute(propName);
+
+  if (definition === Boolean) {
+    return host.hasAttribute(attributeName) || host.hasAttribute(propName);
+  }
+
+  if (attributeValue === null) {
+    return undefined;
+  }
+
+  if (definition === Number) {
+    const value = Number(attributeValue);
+    return Number.isFinite(value) ? value : undefined;
+  }
+
+  if (definition === String) {
+    return attributeValue;
+  }
+
+  return definition(attributeValue);
 };
 
 class Router {
@@ -191,9 +485,7 @@ class Router {
         await routeDefinition.preload(path);
       }
     } catch (error) {
-      if (token !== this.renderToken || path !== this.getCurrentPath()) {
-        return;
-      }
+      if (token !== this.renderToken || path !== this.getCurrentPath()) return;
 
       if (routeDefinition.onError) {
         this.entryElement.innerHTML = routeDefinition.onError(error);
@@ -202,9 +494,7 @@ class Router {
       throw error;
     }
 
-    if (token !== this.renderToken || path !== this.getCurrentPath()) {
-      return;
-    }
+    if (token !== this.renderToken || path !== this.getCurrentPath()) return;
 
     const componentName = routeDefinition.component;
     const currentChild = this.entryElement.firstElementChild as HTMLElement | null;
@@ -230,441 +520,12 @@ class Router {
   }
 }
 
-const isPlainObject = (value: unknown): value is Record<PropertyKey, unknown> => {
-  if (typeof value !== "object" || value === null) return false;
-
-  const prototype = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
-};
-
-const cloneObjectSafely = <T>(value: T, seen = new WeakMap<object, unknown>()): T => {
-  if (isSignal(value)) {
-    return createSignal(value.value) as T;
-  }
-
-  if (typeof value !== "object" || value === null) {
-    return value;
-  }
-
-  if (seen.has(value)) {
-    return seen.get(value) as T;
-  }
-
-  if (Array.isArray(value)) {
-    const clonedArray: unknown[] = [];
-    seen.set(value, clonedArray);
-
-    for (const item of value) {
-      clonedArray.push(cloneObjectSafely(item, seen));
-    }
-
-    return clonedArray as T;
-  }
-
-  if (!isPlainObject(value)) {
-    return value;
-  }
-
-  const clonedObject: Record<PropertyKey, unknown> = {};
-  seen.set(value, clonedObject);
-
-  for (const key of Object.keys(value)) {
-    clonedObject[key] = cloneObjectSafely(
-      (value as Record<PropertyKey, unknown>)[key],
-      seen
-    );
-  }
-
-  return clonedObject as T;
-};
-
-const cloneState = <T extends object>(state: T): T => {
-  if (containsSignal(state)) {
-    return cloneObjectSafely(state);
-  }
-
-  if (typeof structuredClone === "function") {
-    try {
-      return structuredClone(state);
-    } catch {
-      return cloneObjectSafely(state);
-    }
-  }
-
-  return cloneObjectSafely(state);
-};
-
-const toHtmlString = (content: RenderContent): string => {
-  if (typeof content === "string") return content;
-
-  const wrapper = document.createElement("div");
-  wrapper.append(content.content.cloneNode(true));
-  return wrapper.innerHTML;
-};
-
-const isBindToken = <T>(value: unknown): value is BindToken<T> =>
-  typeof value === "object" && value !== null && "__ce_bind" in value;
-
-let activeSignalCollector: Set<Signal<unknown>> | null = null;
-let activeLifecycleOwner: { cleanup: (callback: () => void) => void } | null = null;
-
-const readSignal = <T>(signal: Signal<T>) => {
-  activeSignalCollector?.add(signal as Signal<unknown>);
-  return signal.value;
-};
-
-const peekSignal = <T>(signal: Signal<T>) => {
-  const previousCollector = activeSignalCollector;
-  activeSignalCollector = null;
-
-  try {
-    return signal.value;
-  } finally {
-    activeSignalCollector = previousCollector;
-  }
-};
-
-const createSignalValueProxy = <T>(
-  value: T,
-  notify: () => void,
-  seen = new WeakMap<object, unknown>()
-): T => {
-  if (typeof value !== "object" || value === null) {
-    return value;
-  }
-
-  if (isSignal(value)) {
-    return value;
-  }
-
-  if (!Array.isArray(value) && !isPlainObject(value)) {
-    return value;
-  }
-
-  if (seen.has(value)) {
-    return seen.get(value) as T;
-  }
-
-  const target = value as Record<PropertyKey, unknown>;
-
-  for (const key of Object.keys(target)) {
-    target[key] = createSignalValueProxy(target[key], notify, seen);
-  }
-
-  const proxy = new Proxy(target, {
-    set(stateTarget, property, nextValue) {
-      const previousValue = stateTarget[property];
-      if (Object.is(previousValue, nextValue)) return true;
-
-      stateTarget[property] = createSignalValueProxy(nextValue, notify, seen);
-      notify();
-
-      return true;
-    },
-    deleteProperty(stateTarget, property) {
-      if (!(property in stateTarget)) return true;
-
-      delete stateTarget[property];
-      notify();
-
-      return true;
-    },
-  });
-
-  seen.set(value, proxy);
-
-  return proxy as T;
-};
-
-const createSignal = <T>(initialValue: T): Signal<T> => {
-  let currentValue: T;
-  const listeners = new Set<(value: T) => void>();
-  const notify = () => {
-    for (const listener of Array.from(listeners)) {
-      listener(currentValue);
-    }
-  };
-
-  const signal = (() => readSignal(signal)) as Signal<T>;
-  currentValue = createSignalValueProxy(initialValue, notify);
-
-  Object.defineProperties(signal, {
-    __ce_signal: {
-      value: true,
-    },
-    value: {
-      get() {
-        activeSignalCollector?.add(signal as Signal<unknown>);
-        return currentValue;
-      },
-      set(nextValue: T) {
-        if (Object.is(currentValue, nextValue)) return;
-
-        currentValue = createSignalValueProxy(nextValue, notify);
-        notify();
-      },
-    },
-  });
-
-  signal.set = (nextValue) => {
-    signal.value = nextValue;
-  };
-  signal.update = (updater) => {
-    signal.value = updater(signal.value);
-  };
-  signal.subscribe = (listener) => {
-    listeners.add(listener);
-
-    return () => {
-      listeners.delete(listener);
-    };
-  };
-  signal.toString = () => String(currentValue ?? "");
-  signal.valueOf = () => currentValue as any;
-
-  return signal;
-};
-
-const createDerived = <T>(compute: () => T): Signal<T> => {
-  const derived = createSignal(undefined as T);
-  let cleanups: Array<() => void> = [];
-
-  const recompute = () => {
-    for (const cleanup of cleanups) {
-      cleanup();
-    }
-
-    cleanups = [];
-
-    const previousCollector = activeSignalCollector;
-    const dependencies = new Set<Signal<unknown>>();
-    activeSignalCollector = dependencies;
-
-    try {
-      derived.set(compute());
-    } finally {
-      activeSignalCollector = previousCollector;
-    }
-
-    cleanups = Array.from(dependencies).map((dependency) =>
-      dependency.subscribe(recompute)
-    );
-  };
-
-  recompute();
-
-  return derived;
-};
-
-export function effect(callback: () => EffectCleanup) {
-  const owner = activeLifecycleOwner;
-  let effectCleanup: EffectCleanup;
-  let dependencyCleanups: Array<() => void> = [];
-  let disposed = false;
-
-  const run = () => {
-    if (disposed) return;
-
-    if (typeof effectCleanup === "function") {
-      effectCleanup();
-    }
-
-    for (const cleanup of dependencyCleanups) {
-      cleanup();
-    }
-
-    dependencyCleanups = [];
-
-    const previousCollector = activeSignalCollector;
-    const dependencies = new Set<Signal<unknown>>();
-    activeSignalCollector = dependencies;
-
-    try {
-      effectCleanup = callback();
-    } finally {
-      activeSignalCollector = previousCollector;
-    }
-
-    dependencyCleanups = Array.from(dependencies).map((dependency) =>
-      dependency.subscribe(run)
-    );
-  };
-
-  run();
-
-  const dispose = () => {
-    disposed = true;
-
-    if (typeof effectCleanup === "function") {
-      effectCleanup();
-    }
-
-    for (const cleanup of dependencyCleanups) {
-      cleanup();
-    }
-
-    dependencyCleanups = [];
-  };
-
-  owner?.cleanup(dispose);
-
-  return dispose;
-}
-
-const isSignal = <T = unknown>(value: unknown): value is Signal<T> =>
-  (typeof value === "object" || typeof value === "function") &&
-  value !== null &&
-  "__ce_signal" in value;
-
-const containsSignal = (value: unknown, seen = new WeakSet<object>()): boolean => {
-  if (isSignal(value)) return true;
-  if (typeof value !== "object" || value === null) return false;
-  if (seen.has(value)) return false;
-
-  seen.add(value);
-
-  if (Array.isArray(value)) {
-    return value.some((item) => containsSignal(item, seen));
-  }
-
-  if (!isPlainObject(value)) return false;
-
-  return Object.keys(value).some((key) =>
-    containsSignal((value as Record<string, unknown>)[key], seen)
-  );
-};
-
-type HtmlRenderContext = {
-  eventHandlers: Array<EventListener>;
-  signals: Array<Signal<unknown>>;
-  dependencies: Set<Signal<unknown>>;
-  hasUnslottedDynamic: boolean;
-};
-
-let activeHtmlRenderContext: HtmlRenderContext | null = null;
-
-const withHtmlRenderContext = <T>(callback: () => T) => {
-  const previousContext = activeHtmlRenderContext;
-  const context: HtmlRenderContext = {
-    eventHandlers: [],
-    signals: [],
-    dependencies: new Set(),
-    hasUnslottedDynamic: false,
-  };
-  const previousSignalCollector = activeSignalCollector;
-
-  activeHtmlRenderContext = context;
-  activeSignalCollector = context.dependencies;
-
-  try {
-    return {
-      value: callback(),
-      context,
-    };
-  } finally {
-    activeHtmlRenderContext = previousContext;
-    activeSignalCollector = previousSignalCollector;
-  }
-};
-
-const isAttributeInterpolation = (staticSegment: string) => {
-  const lastOpenTag = staticSegment.lastIndexOf("<");
-  const lastCloseTag = staticSegment.lastIndexOf(">");
-
-  return lastOpenTag > lastCloseTag;
-};
-
-const getEventAttributeName = (staticSegment: string) => {
-  const match = staticSegment.match(/(\s)(on[a-z][\w:-]*)\s*=\s*$/i);
-  if (!match) return null;
-
-  const attributeName = match[2].toLowerCase();
-  return {
-    attributeName,
-    eventName: attributeName.slice(2),
-    staticPrefix: staticSegment.slice(0, -match[0].length) + match[1],
-  };
-};
-
-const getDynamicAttributeName = (staticSegment: string) => {
-  const match = staticSegment.match(/(\s)([\w:-]+)\s*=\s*["']?$/);
-  if (!match) return null;
-
-  return {
-    attributeName: match[2],
-    staticPrefix: staticSegment.slice(0, -match[0].length) + match[1],
-  };
-};
-
-const toKebabCase = (value: string) =>
-  value
-    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
-    .replace(/([A-Z])([A-Z][a-z])/g, "$1-$2")
-    .toLowerCase();
-
-const inferComponentName = (component: Function) => {
-  const tagName = toKebabCase(component.name);
-
-  if (!component.name || !tagName.includes("-")) {
-    throw new Error(
-      "define() requires a named multi-word function. Example: define(function MyCounter() { ... })"
-    );
-  }
-
-  return tagName;
-};
-
-const getPropAttributeName = (propName: string) => toKebabCase(propName);
-
-const parsePropValue = (
-  host: HTMLElement,
-  propName: string,
-  definition: PropDefinition
-) => {
-  const attributeName = getPropAttributeName(propName);
-  const attributeValue =
-    host.getAttribute(attributeName) ?? host.getAttribute(propName);
-
-  if (definition === Boolean) {
-    return host.hasAttribute(attributeName) || host.hasAttribute(propName);
-  }
-
-  if (attributeValue === null) {
-    return undefined;
-  }
-
-  if (definition === Number) {
-    const value = Number(attributeValue);
-    return Number.isFinite(value) ? value : undefined;
-  }
-
-  if (definition === String) {
-    return attributeValue;
-  }
-
-  return definition(attributeValue);
-};
-
 export class CE {
   static entryPoint = "";
   static entryElement: HTMLElement | null = null;
-
   static routes = new Map<string, RouteDefinition>();
-  static definitions = new Map<
-    string,
-    {
-      state: Record<string, any>;
-      props?: PropsDefinition;
-      setup?: (this: any, context: SetupContext<any>) => Record<string, any>;
-      render: (this: CEInstance<any, any>) => RenderContent | Promise<RenderContent>;
-      handlers?: CEHandlers<any>;
-    }
-  >();
+  static definitions = new Map<string, ComponentDefinition<any>>();
   static router = new Router();
-
-  static async navigate(path: string) {
-    await CE.router.navigate(path);
-  }
 
   static signal<T>(value: T): Signal<T> {
     return createSignal(value);
@@ -678,110 +539,37 @@ export class CE {
     return effect(callback);
   }
 
-  static setEntryPoint(
-    entryPoint: string,
-    options?: { rootElement?: HTMLElement; hydrate?: boolean }
-  ) {
-    this.entryPoint = entryPoint;
-
-    const existingRoot =
-      options?.rootElement ?? document.querySelector<HTMLElement>(entryPoint);
-    const root = existingRoot ?? document.createElement(entryPoint);
-
-    this.entryElement = root;
-
-    if (!existingRoot) {
-      document.body.append(root);
-    }
-
-    this.router.setEntryElement(root, { hydrate: options?.hydrate });
-  }
-
-  static define<
-    T extends Record<string, any>,
-    K extends CEHandlers<T> = CEHandlers<T>,
-    P extends PropsDefinition | undefined = undefined
-  >(params: DefineParams<T, K, P>): void;
   static define<P extends PropsDefinition | undefined = undefined>(
     component: FunctionComponent<P>,
-    options?: FunctionDefineOptions<P>
-  ): void;
-  static define<
-    T extends Record<string, any>,
-    K extends CEHandlers<T> = CEHandlers<T>,
-    P extends PropsDefinition | undefined = undefined
-  >(
-    paramsOrComponent: DefineParams<T, K, P> | FunctionComponent<P>,
-    options: FunctionDefineOptions<P> = {}
+    options: DefineOptions<P> = {}
   ) {
-    const params = (
-      typeof paramsOrComponent === "function"
-        ? CE.createFunctionDefineParams(paramsOrComponent, options)
-        : paramsOrComponent
-    ) as DefineParams<T, K, P>;
-    const {
-      name,
-      state,
-      props: propDefinitions,
-      route,
-      preload,
-      onError,
-      render,
-      setup,
-      handlers,
-      onConnect = () => {},
-      onDisconnect = () => {},
-      onAdopt = () => {},
-      onAttributeChange = () => {},
-    } = params;
-    const reservedKeys = new Set([
-      "name",
-      "state",
-      "props",
-      "route",
-      "preload",
-      "onError",
-      "render",
-      "setup",
-      "handlers",
-      "onConnect",
-      "onDisconnect",
-      "onAdopt",
-      "onAttributeChange",
-    ]);
-    const componentMethods = Object.entries(params).filter(
-      ([key, value]) => !reservedKeys.has(key) && typeof value === "function"
-    ) as Array<[string, Function]>;
+    if (typeof component !== "function") {
+      throw new Error("define() only accepts a named function component.");
+    }
+
+    const name = inferComponentName(component);
+    const propDefinitions = options.props;
 
     CE.definitions.set(name, {
-      state,
+      name,
+      component,
       props: propDefinitions,
-      setup: setup as ((this: any, context: SetupContext<any>) => Record<string, any>) | undefined,
-      render,
-      handlers,
     });
 
-    if (route) {
-      CE.router.registerRoute(route, {
+    if (options.route) {
+      CE.router.registerRoute(options.route, {
         component: name,
-        preload,
-        onError,
+        preload: options.preload,
+        onError: options.onError,
       });
     }
 
-    if (customElements.get(name)) {
+    if (typeof customElements === "undefined" || customElements.get(name)) {
       return;
     }
 
     class CEElement extends HTMLElement {
-      private _state: T;
-      private readonly componentId = CE.createInstanceId();
       private renderToken = 0;
-      private bindingMap = new Map<string, Set<HTMLElement>>();
-      private delegatedHandlers = new Map<
-        string,
-        { eventName: string; listener: EventListener }
-      >();
       private inlineHandlers = new Map<
         HTMLElement,
         { eventName: string; listener: EventListener }
@@ -792,9 +580,14 @@ export class CE {
       private lifecycleCleanupCallbacks: Array<() => void> = [];
       private lifecycleAdoptedCallbacks: Array<() => void> = [];
       private propSignals = new Map<string, Signal<unknown>>();
-      private pendingStateKeys = new Set<string>();
-      private stateUpdateQueued = false;
       private lastHtmlContext: HtmlRenderContext | null = null;
+      private componentRender:
+        | (() => RenderContent | Promise<RenderContent>)
+        | null = null;
+      private initialRenderSnapshot: {
+        value: RenderContent | Promise<RenderContent>;
+        context: HtmlRenderContext;
+      } | null = null;
       readonly lifecycle: Lifecycle = {
         connected: (callback) => {
           this.lifecycleConnectedCallbacks.push(callback);
@@ -807,25 +600,19 @@ export class CE {
         },
       };
       props = this.createReactiveProps();
-      private setupInitialized = false;
 
       constructor() {
         super();
         this.attachShadow({ mode: "open" });
-        this._state = this.createReactiveState(cloneState(state)) as T;
+      }
 
-        for (const [methodName, method] of componentMethods) {
-          Object.defineProperty(this, methodName, {
-            configurable: true,
-            value: method.bind(this),
-          });
-        }
+      static get observedAttributes() {
+        return Object.keys(propDefinitions ?? {}).map(getPropAttributeName);
       }
 
       connectedCallback() {
-        this.initializeSetup();
+        this.initializeComponent();
         void this.renderComponent();
-        onConnect.call(this as CEInstance<T, K>);
         for (const callback of this.lifecycleConnectedCallbacks) {
           callback();
         }
@@ -833,39 +620,19 @@ export class CE {
 
       disconnectedCallback() {
         this.cleanupEventHandlers();
-        onDisconnect.call(this as CEInstance<T, K>);
         for (const callback of this.lifecycleCleanupCallbacks) {
           callback();
         }
       }
 
       adoptedCallback() {
-        onAdopt.call(this as CEInstance<T, K>);
         for (const callback of this.lifecycleAdoptedCallbacks) {
           callback();
         }
       }
 
-      attributeChangedCallback(
-        attrName: string,
-        oldValue: string | null,
-        newValue: string | null
-      ) {
+      attributeChangedCallback(attrName: string) {
         this.updatePropSignal(attrName);
-        onAttributeChange.call(
-          this as CEInstance<T, K>,
-          attrName,
-          oldValue,
-          newValue
-        );
-      }
-
-      get state(): T {
-        return this._state;
-      }
-
-      static get observedAttributes() {
-        return Object.keys(propDefinitions ?? {}).map(getPropAttributeName);
       }
 
       private createReactiveProps() {
@@ -918,206 +685,35 @@ export class CE {
         }
       }
 
-      private initializeSetup() {
-        if (this.setupInitialized) return;
-
-        this.setupInitialized = true;
-
-        if (!setup) return;
+      private initializeComponent() {
+        if (this.componentRender) return;
 
         const previousOwner = activeLifecycleOwner;
         activeLifecycleOwner = this.lifecycle;
 
-        let setupResult: Record<string, any> | undefined;
         try {
-          setupResult = setup.call(this as CEInstance<T, K>, {
-            props: this.props,
-            signal: CE.signal,
-            derived: CE.derived,
-          });
+          const rendered = withHtmlRenderContext(() =>
+            component({
+              props: this.props as InferProps<P>,
+              host: this,
+              lifecycle: this.lifecycle,
+            })
+          );
+          const result = rendered.value;
+
+          if (typeof result === "function") {
+            this.componentRender = result;
+            return;
+          }
+
+          this.initialRenderSnapshot = {
+            value: result as RenderContent | Promise<RenderContent>,
+            context: rendered.context,
+          };
+          this.componentRender = () =>
+            result as RenderContent | Promise<RenderContent>;
         } finally {
           activeLifecycleOwner = previousOwner;
-        }
-
-        for (const [key, value] of Object.entries(setupResult ?? {})) {
-          Object.defineProperty(this, key, {
-            configurable: true,
-            value:
-              typeof value === "function" && !isSignal(value)
-                ? value.bind(this)
-                : value,
-          });
-        }
-      }
-
-      bind(key: keyof T): BindToken<T> {
-        return {
-          __ce_bind: true,
-          ownerId: this.componentId,
-          key,
-          content: this._state[key],
-        };
-      }
-
-      setState(newState: Partial<T>) {
-        Object.assign(this._state, newState);
-        this.flushStateUpdates();
-      }
-
-      private createReactiveState(value: unknown, rootKey?: string): unknown {
-        if (typeof value !== "object" || value === null) {
-          return value;
-        }
-
-        if (!Array.isArray(value) && !isPlainObject(value)) {
-          return value;
-        }
-
-        const target = value as Record<PropertyKey, unknown>;
-
-        for (const key of Object.keys(target)) {
-          target[key] = this.createReactiveState(target[key], String(rootKey ?? key));
-        }
-
-        return new Proxy(target, {
-          set: (stateTarget, property, nextValue) => {
-            const previousValue = stateTarget[property];
-            if (Object.is(previousValue, nextValue)) return true;
-
-            stateTarget[property] = this.createReactiveState(
-              nextValue,
-              String(rootKey ?? property)
-            );
-            this.queueStateUpdate(String(rootKey ?? property));
-
-            return true;
-          },
-          deleteProperty: (stateTarget, property) => {
-            if (!(property in stateTarget)) return true;
-
-            delete stateTarget[property];
-            this.queueStateUpdate(String(rootKey ?? property));
-
-            return true;
-          },
-        });
-      }
-
-      private queueStateUpdate(key: string) {
-        this.pendingStateKeys.add(key);
-        if (this.stateUpdateQueued) return;
-
-        this.stateUpdateQueued = true;
-
-        queueMicrotask(() => {
-          this.stateUpdateQueued = false;
-          const keys = Array.from(this.pendingStateKeys);
-          this.pendingStateKeys.clear();
-          this.applyStateUpdate(keys);
-        });
-      }
-
-      private flushStateUpdates() {
-        if (this.pendingStateKeys.size === 0) return;
-
-        this.stateUpdateQueued = false;
-        const keys = Array.from(this.pendingStateKeys);
-        this.pendingStateKeys.clear();
-        this.applyStateUpdate(keys);
-      }
-
-      private applyStateUpdate(keys: string[]) {
-        let needsRender = false;
-
-        for (const key of keys) {
-          const nodes = this.bindingMap.get(String(key));
-          if (!nodes || nodes.size === 0) {
-            needsRender = true;
-            continue;
-          }
-
-          for (const node of Array.from(nodes)) {
-            node.textContent = String(this._state[key as keyof T] ?? "");
-          }
-        }
-
-        if (needsRender) {
-          void this.patchDynamicRender();
-        }
-      }
-
-      private indexBindings() {
-        this.bindingMap.clear();
-
-        const nodes = this.shadowRoot?.querySelectorAll<HTMLElement>("[data-ce-bind]");
-        if (!nodes) return;
-
-        for (const node of Array.from(nodes)) {
-          if (node.dataset.ceOwner !== this.componentId) continue;
-
-          const key = node.dataset.ceKey;
-          if (!key) continue;
-
-          if (!this.bindingMap.has(key)) {
-            this.bindingMap.set(key, new Set());
-          }
-
-          this.bindingMap.get(key)?.add(node);
-        }
-      }
-
-      private registerEventHandlers(eventHandlers?: K) {
-        if (!eventHandlers || !this.shadowRoot) return;
-
-        const requiredDelegatedHandlers = new Set<string>();
-
-        for (const [handlerName, handler] of Object.entries(eventHandlers)) {
-          if (typeof handler !== "function") continue;
-
-          const targets = this.shadowRoot.querySelectorAll<HTMLElement>(`[${handlerName}]`);
-          for (const target of Array.from(targets)) {
-            const eventName = target.getAttribute(handlerName);
-            if (!eventName) continue;
-
-            const delegatedHandlerKey = `${handlerName}:${eventName}`;
-            requiredDelegatedHandlers.add(delegatedHandlerKey);
-
-            if (this.delegatedHandlers.has(delegatedHandlerKey)) continue;
-
-            const listener: EventListener = (event) => {
-              const eventTargets =
-                typeof event.composedPath === "function"
-                  ? event.composedPath()
-                  : [event.target];
-
-              for (const eventTarget of eventTargets) {
-                if (!(eventTarget instanceof Element)) continue;
-
-                const registeredEventName = eventTarget.getAttribute(handlerName);
-                if (
-                  registeredEventName === eventName &&
-                  this.shadowRoot?.contains(eventTarget)
-                ) {
-                  handler.call(this as CEInstance<T, K>);
-                  break;
-                }
-              }
-            };
-
-            this.delegatedHandlers.set(delegatedHandlerKey, { eventName, listener });
-            this.shadowRoot.addEventListener(eventName, listener, true);
-          }
-        }
-
-        for (const [delegatedHandlerKey, delegatedHandler] of this.delegatedHandlers) {
-          if (requiredDelegatedHandlers.has(delegatedHandlerKey)) continue;
-
-          this.shadowRoot.removeEventListener(
-            delegatedHandler.eventName,
-            delegatedHandler.listener,
-            true
-          );
-          this.delegatedHandlers.delete(delegatedHandlerKey);
         }
       }
 
@@ -1138,7 +734,7 @@ export class CE {
           if (!eventName || typeof handler !== "function") continue;
 
           const listener: EventListener = (event) => {
-            handler.call(this as CEInstance<T, K>, event);
+            handler.call(this, event);
           };
 
           target.addEventListener(eventName, listener);
@@ -1208,33 +804,16 @@ export class CE {
       }
 
       private cleanupSignalBindings() {
-        for (const cleanup of this.signalCleanups) {
-          cleanup();
-        }
-
+        for (const cleanup of this.signalCleanups) cleanup();
         this.signalCleanups = [];
       }
 
       private cleanupRenderDependencies() {
-        for (const cleanup of this.renderDependencyCleanups) {
-          cleanup();
-        }
-
+        for (const cleanup of this.renderDependencyCleanups) cleanup();
         this.renderDependencyCleanups = [];
       }
 
       private cleanupEventHandlers() {
-        if (!this.shadowRoot) return;
-
-        for (const delegatedHandler of this.delegatedHandlers.values()) {
-          this.shadowRoot.removeEventListener(
-            delegatedHandler.eventName,
-            delegatedHandler.listener,
-            true
-          );
-        }
-
-        this.delegatedHandlers.clear();
         this.cleanupInlineEventHandlers();
         this.cleanupSignalBindings();
         this.cleanupRenderDependencies();
@@ -1246,10 +825,13 @@ export class CE {
       }
 
       private async renderComponent() {
+        if (!this.componentRender) return;
+
         const token = ++this.renderToken;
-        const rendered = withHtmlRenderContext(() =>
-          render.call(this as CEInstance<T, K>)
-        );
+        const rendered =
+          this.initialRenderSnapshot ??
+          withHtmlRenderContext(() => this.componentRender?.() ?? "");
+        this.initialRenderSnapshot = null;
         const content = rendered.value;
 
         if (content instanceof Promise) {
@@ -1265,8 +847,6 @@ export class CE {
         if (token !== this.renderToken) return;
 
         this.lastHtmlContext = rendered.context;
-        this.indexBindings();
-        this.registerEventHandlers(handlers);
         this.registerInlineEventHandlers(rendered.context.eventHandlers);
         this.registerSignalBindings(rendered.context.signals);
         this.registerRenderDependencies(rendered.context.dependencies);
@@ -1275,6 +855,7 @@ export class CE {
       private async patchDynamicRender() {
         if (
           !this.shadowRoot ||
+          !this.componentRender ||
           !this.lastHtmlContext ||
           this.lastHtmlContext.hasUnslottedDynamic
         ) {
@@ -1283,9 +864,7 @@ export class CE {
         }
 
         const token = ++this.renderToken;
-        const rendered = withHtmlRenderContext(() =>
-          render.call(this as CEInstance<T, K>)
-        );
+        const rendered = withHtmlRenderContext(() => this.componentRender?.() ?? "");
         const content = rendered.value;
 
         if (content instanceof Promise || rendered.context.hasUnslottedDynamic) {
@@ -1320,8 +899,6 @@ export class CE {
         if (token !== this.renderToken) return;
 
         this.lastHtmlContext = rendered.context;
-        this.indexBindings();
-        this.registerEventHandlers(handlers);
         this.registerInlineEventHandlers(rendered.context.eventHandlers);
         this.registerSignalBindings(rendered.context.signals);
         this.registerRenderDependencies(rendered.context.dependencies);
@@ -1331,161 +908,104 @@ export class CE {
     customElements.define(name, CEElement);
   }
 
-  private static createFunctionDefineParams<P extends PropsDefinition | undefined>(
-    component: FunctionComponent<P>,
-    options: FunctionDefineOptions<P>
-  ): DefineParams<Record<string, never>, CEHandlers<Record<string, never>>, P> {
-    return {
-      name: inferComponentName(component),
-      state: {},
-      props: options.props,
-      route: options.route,
-      preload: options.preload,
-      onError: options.onError,
-      render() {
-        if (!this.__ceFunctionRender) {
-          const previousOwner = activeLifecycleOwner;
-          activeLifecycleOwner = this.lifecycle;
+  static setEntryPoint(
+    entryPoint: string,
+    options?: { rootElement?: HTMLElement; hydrate?: boolean }
+  ) {
+    this.entryPoint = entryPoint;
 
-          try {
-            const result = component({
-              props: this.props as InferProps<P>,
-              host: this,
-              lifecycle: this.lifecycle,
-            });
+    const existingRoot =
+      options?.rootElement ?? document.querySelector<HTMLElement>(entryPoint);
+    const root = existingRoot ?? document.createElement(entryPoint);
 
-            this.__ceFunctionRender =
-              typeof result === "function"
-                ? result
-                : () => result as RenderContent | Promise<RenderContent>;
-          } finally {
-            activeLifecycleOwner = previousOwner;
-          }
-        }
+    this.entryElement = root;
 
-        return this.__ceFunctionRender();
-      },
-    };
+    if (!existingRoot) {
+      document.body.append(root);
+    }
+
+    this.router.setEntryElement(root, { hydrate: options?.hydrate });
   }
 
-  static async renderRouteToString(path: string, options?: { entryPoint?: string }) {
-    const routeDefinition = CE.routes.get(path) ?? CE.routes.get("/");
-    if (!routeDefinition) return "";
+  static async navigate(path: string) {
+    await CE.router.navigate(path);
+  }
 
-    const definition = CE.definitions.get(routeDefinition.component);
-    if (!definition) return "";
-
-    let routeMarkup = "";
+  static async renderStatic<P extends PropsDefinition | undefined = undefined>(
+    component: FunctionComponent<P>,
+    options: RenderStaticOptions<P> = {}
+  ) {
+    const tagName = options.tag ?? inferComponentName(component);
+    const props = (options.props ?? {}) as InferProps<P>;
+    const lifecycle: Lifecycle = {
+      connected: () => {},
+      cleanup: () => {},
+      adopted: () => {},
+    };
+    const previousOwner = activeLifecycleOwner;
+    const previousStaticSnapshot = activeStaticSnapshot;
+    activeLifecycleOwner = lifecycle;
+    activeStaticSnapshot = true;
 
     try {
-      if (routeDefinition.preload) {
-        await routeDefinition.preload(path);
+      const rendered = withHtmlRenderContext(
+        () =>
+          component({
+            props,
+            host: {} as HTMLElement,
+            lifecycle,
+          }),
+        { staticSnapshot: true }
+      );
+      const result = rendered.value;
+      const render =
+        typeof result === "function"
+          ? result
+          : () => result as RenderContent | Promise<RenderContent>;
+      const snapshot = withHtmlRenderContext(() => render(), {
+        staticSnapshot: true,
+      });
+      const content = snapshot.value;
+      const resolved = content instanceof Promise ? await content : content;
+      const markup = toHtmlString(resolved);
+      const attributes =
+        options.attributes === false
+          ? ""
+          : serializeHostAttributes(options.attributes ?? props);
+
+      if (options.mode === "light-dom") {
+        return `<${tagName}${attributes}>${markup}</${tagName}>`;
       }
 
-      routeMarkup = `<${routeDefinition.component}>${await CE.renderComponentToString(
-        definition
-      )}</${routeDefinition.component}>`;
-    } catch (error) {
-      if (!routeDefinition.onError) {
-        throw error;
-      }
-
-      routeMarkup = routeDefinition.onError(error);
+      return `<${tagName}${attributes}><template shadowrootmode="open">${markup}</template></${tagName}>`;
+    } finally {
+      activeLifecycleOwner = previousOwner;
+      activeStaticSnapshot = previousStaticSnapshot;
     }
-
-    const entryTag = options?.entryPoint ?? this.entryPoint ?? "div";
-    return `<${entryTag}>${routeMarkup}</${entryTag}>`;
-  }
-
-  private static async renderComponentToString(definition: {
-    state: Record<string, any>;
-    props?: PropsDefinition;
-    setup?: (this: any, context: SetupContext<any>) => Record<string, any>;
-    render: (this: any) => RenderContent | Promise<RenderContent>;
-    handlers?: CEHandlers<any>;
-  }) {
-    const stateCopy = cloneState(definition.state);
-    const componentId = CE.createInstanceId();
-    const props = Object.fromEntries(
-      Object.keys(definition.props ?? {}).map((key) => [key, undefined])
-    );
-
-    const context = {
-      state: stateCopy,
-      props,
-      handlers: definition.handlers,
-      setState(newState: Record<string, any>) {
-        Object.assign(stateCopy, newState);
-      },
-      bind(key: string) {
-        return {
-          __ce_bind: true as const,
-          ownerId: componentId,
-          key,
-          content: stateCopy[key],
-        };
-      },
-    };
-
-    const setupResult = definition.setup?.call(context, {
-      props,
-      signal: CE.signal,
-      derived: CE.derived,
-    });
-
-    Object.assign(context, setupResult);
-
-    const rendered = definition.render.call(context);
-    const resolved = rendered instanceof Promise ? await rendered : rendered;
-
-    if (typeof resolved === "string") {
-      return resolved;
-    }
-
-    if (typeof document === "undefined") {
-      return "";
-    }
-
-    return toHtmlString(resolved);
-  }
-
-  private static id = 0;
-
-  private static createInstanceId() {
-    CE.id += 1;
-    return `ce-${CE.id}`;
   }
 }
 
-CE.define({
-  name: "render-value",
-  state: {},
-  render() {
-    return "";
-  },
-});
+export const define = CE.define.bind(CE) as typeof CE.define;
+export const signal = CE.signal.bind(CE) as typeof CE.signal;
+export const derived = CE.derived.bind(CE) as typeof CE.derived;
+export const navigate = CE.navigate.bind(CE) as typeof CE.navigate;
+export const setEntryPoint = CE.setEntryPoint.bind(CE) as typeof CE.setEntryPoint;
+export const renderStatic = CE.renderStatic.bind(CE) as typeof CE.renderStatic;
 
-export function html<T>(
+export function html(
   strings: TemplateStringsArray,
-  ...values: Array<HtmlValue<T>>
+  ...values: Array<HtmlValue>
 ): string {
   return strings.reduce((result, str, index) => {
     return result + renderHtmlValue(str, values[index]);
   }, "");
 }
 
-const renderHtmlValue = <T>(staticSegment: string, value: HtmlValue<T>): string => {
+const renderHtmlValue = (staticSegment: string, value: HtmlValue): string => {
   if (value === undefined || value === null) return staticSegment;
 
   if (Array.isArray(value)) {
-    if (isAttributeInterpolation(staticSegment)) {
-      if (activeHtmlRenderContext) {
-        activeHtmlRenderContext.hasUnslottedDynamic = true;
-      }
-
-      return staticSegment + value.map(renderHtmlArrayItem).join("");
-    }
-
+    if (value.length === 0) return staticSegment;
     return staticSegment + value.map(renderHtmlArrayItem).join("");
   }
 
@@ -1496,8 +1016,13 @@ const renderHtmlValue = <T>(staticSegment: string, value: HtmlValue<T>): string 
       return staticSegment + String(signalValue ?? "");
     }
 
-    const signalIndex = activeHtmlRenderContext.signals.push(value) - 1;
     const attribute = getDynamicAttributeName(staticSegment);
+
+    if (activeHtmlRenderContext.staticSnapshot) {
+      return staticSegment + String(signalValue ?? "");
+    }
+
+    const signalIndex = activeHtmlRenderContext.signals.push(value) - 1;
 
     if (attribute) {
       return (
@@ -1523,18 +1048,15 @@ const renderHtmlValue = <T>(staticSegment: string, value: HtmlValue<T>): string 
       return staticSegment;
     }
 
+    if (activeHtmlRenderContext.staticSnapshot) {
+      return eventAttribute.staticPrefix.trimEnd();
+    }
+
     const eventIndex = activeHtmlRenderContext.eventHandlers.push(value) - 1;
 
     return (
       eventAttribute.staticPrefix +
       `data-ce-event="${eventIndex}:${eventAttribute.eventName}"`
-    );
-  }
-
-  if (isBindToken<T>(value)) {
-    return (
-      staticSegment +
-      `<span data-ce-bind data-ce-owner="${value.ownerId}" data-ce-key="${String(value.key)}">${String(value.content)}</span>`
     );
   }
 
@@ -1546,21 +1068,33 @@ const renderHtmlValue = <T>(staticSegment: string, value: HtmlValue<T>): string 
     return staticSegment + String(value);
   }
 
+  if (activeHtmlRenderContext?.staticSnapshot) {
+    return staticSegment + String(value);
+  }
+
   return staticSegment + `<span data-ce-slot>${String(value)}</span>`;
 };
 
-const renderHtmlArrayItem = <T>(value: HtmlValue<T>): string => {
-  if (typeof value === "string") return value;
+const serializeHostAttributes = (props: Record<string, unknown>) => {
+  const attributes = Object.entries(props)
+    .filter(([, value]) => value !== undefined && value !== null && value !== false)
+    .map(([name, value]) => {
+      const attrName = getPropAttributeName(name);
+      if (value === true) return attrName;
+      return `${attrName}="${escapeAttribute(value)}"`;
+    });
 
+  return attributes.length > 0 ? ` ${attributes.join(" ")}` : "";
+};
+
+const renderHtmlArrayItem = (value: HtmlValue): string => {
+  if (typeof value === "string") return value;
   return renderHtmlValue("", value);
 };
 
 export function match<T>(value: T) {
   return {
-    when<R>(
-      predicate: MatchPredicate<T>,
-      handler: MatchHandler<T, R>
-    ) {
+    when<R>(predicate: MatchPredicate<T>, handler: MatchHandler<T, R>) {
       if (predicate(value)) {
         return createMatchedResult(handler(value));
       }
@@ -1580,10 +1114,7 @@ const createMatchedResult = <R>(result: R) => ({
 });
 
 const createMatchBuilder = <T, R>(value: T) => ({
-  when(
-    predicate: MatchPredicate<T>,
-    handler: MatchHandler<T, R>
-  ) {
+  when(predicate: MatchPredicate<T>, handler: MatchHandler<T, R>) {
     if (predicate(value)) {
       return createMatchedResult(handler(value));
     }

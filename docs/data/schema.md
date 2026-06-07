@@ -1,19 +1,19 @@
 # Data Schema
 
-이 문서는 `docs/data/` 하위 JSON 파일에서 공통으로 사용하는 필드명 규칙을 고정합니다.
+This document defines the shared field-name contract for JSON files under `docs/data/`.
 
-## 고정 필드명 규칙
+## Stable Field Names
 
-아래 필드명은 스키마 기준 필드이며, 새로운 데이터 추가 시 동일한 이름을 사용해야 합니다.
+Use these schema field names when adding or updating data.
 
-- `id`: 항목 고유 식별자 (`kebab-case` 문자열)
-- `status`: 현재 상태 (`planned` | `in-progress` | `done` | `blocked`)
-- `owner`: 담당자 또는 담당 팀
-- `lastUpdated`: 마지막 갱신 시각 (`YYYY-MM-DD`)
-- `milestone`: 마일스톤 식별자 또는 이름
-- `priority`: 우선순위 (`low` | `medium` | `high` | `critical`)
+- `id`: Unique item identifier as a `kebab-case` string
+- `status`: Current state (`planned` | `in-progress` | `done` | `blocked`)
+- `owner`: Responsible person or team
+- `lastUpdated`: Last update date as `YYYY-MM-DD`
+- `milestone`: Milestone identifier or name
+- `priority`: Priority (`low` | `medium` | `high` | `critical`)
 
-## 파일별 구조
+## File Shapes
 
 ### `components-status.json`
 
@@ -66,10 +66,10 @@
 }
 ```
 
-## 리뷰 포인트
+## Review Scope
 
-본 PR의 리뷰 포인트는 **데이터 스키마 적합성**으로 한정합니다.
+Reviews for data changes should focus on schema compliance.
 
-## 머지 후 원칙
+## After Merge
 
-머지 이후 생성되는 다른 PR은 이 문서의 스키마(필드명 규칙)를 기준으로만 참조합니다.
+Future data PRs should reference this schema as the source of truth for field names and file shapes.

@@ -4,22 +4,134 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CE Docs Site | Usage</title>
-    <link rel="stylesheet" href="assets/styles.css?v=20260607-ce-doc-pages" />
-    <script type="module" src="assets/app.js?v=20260607-ce-doc-shell"></script>
+    <link rel="stylesheet" href="assets/styles.css?v=20260607-static-docs" />
   </head>
-  <body data-page="usage">
-    <main>
-      <section class="card">
-        <h2>Usage</h2>
-        <p>Use this section to connect implementation examples with the official API and release playbook.</p>
-      </section>
-      <section class="card">
-        <h2>Reference Links</h2>
-        <ul>
-          <li><a href="api.html">Read API reference</a></li>
-          <li><a href="release.html">Read release process</a></li>
-        </ul>
-      </section>
-    </main>
+  <body>
+<docs-page>
+    <div class="site-page">
+      <header class="site-header">
+        <div class="site-header__inner">
+          <h1 class="site-title">CE Docs Site</h1>
+          <nav class="site-nav" aria-label="Primary navigation">
+            <a href="index.html">Overview</a>
+              <a href="usage.html" aria-current="page">Usage</a>
+              <a href="api.html">API</a>
+              <a href="components.html">Components</a>
+              <a href="roadmap.html">Roadmap</a>
+              <a href="release.html">Release</a>
+              <a href="playground.html">Playground</a>
+          </nav>
+        </div>
+      </header>
+      <div class="site-shell">
+        <div class="docs-layout">
+          <aside class="docs-sidebar" aria-label="Documentation sections">
+            <section class="docs-nav-group">
+              <h2>Start</h2>
+              <ul>
+                <li><a href="index.html">Overview</a></li>
+                <li><a href="usage.html" aria-current="page">Usage guide</a></li>
+                <li><a href="playground.html">Playground</a></li>
+              </ul>
+            </section>
+            <section class="docs-nav-group">
+              <h2>Reference</h2>
+              <ul>
+                <li><a href="api.html">Public API</a></li>
+                <li><a href="components.html">Component model</a></li>
+                <li><a href="roadmap.html">Roadmap</a></li>
+              </ul>
+            </section>
+            <section class="docs-nav-group">
+              <h2>Project</h2>
+              <ul>
+                <li><a href="release.html">Release process</a></li>
+              </ul>
+            </section>
+          </aside>
+          <div class="docs-main">
+            <main>
+                    <article class="doc-page">
+        <h2 id="usage">Usage</h2>
+        <p>Use CE when a small custom element needs local state, scoped rendering, and direct event handling without a larger app framework.</p>
+
+        <h3 id="install-the-web-runtime">Install the web runtime</h3>
+        <p>Browser-facing components import named helpers from the web entrypoint. The package root stays core-only.</p>
+        <pre><code>import { define, html, signal, derived, match } from "@ga-ut/ce/web";</code></pre>
+
+        <h3 id="define-a-component">Define a component</h3>
+        <p>The component function owns setup and render. A function named <code>ProductBadge</code> registers the <code>product-badge</code> custom element.</p>
+        <pre><code>define(function ProductBadge({ props }) {
+  const selected = signal(false);
+  const label = derived(() =&gt; selected() ? "Selected" : props.label);
+
+  return html`
+    &lt;button onclick=${() =&gt; selected.update((value) =&gt; !value)}&gt;
+      ${label}
+    &lt;/button&gt;
+  `;
+}, {
+  props: {
+    label: String
+  }
+});</code></pre>
+
+        <h3 id="render-it-in-html">Render it in HTML</h3>
+        <p>Once defined, the element is used like any other custom element. Props are read from attributes and converted by the declared prop type.</p>
+        <pre><code>&lt;product-badge label="In stock"&gt;&lt;/product-badge&gt;</code></pre>
+
+        <h3 id="generated-static-snapshot">Generated static snapshot</h3>
+        <p>The docs build runs the component once at build time and emits Declarative Shadow DOM without a headless browser.</p>
+        <product-badge label="In stock"><template shadowrootmode="open">
+        <style>
+          button {
+            border: 1px solid #2563eb;
+            border-radius: 8px;
+            background: #fff;
+            color: #1d4ed8;
+            font: inherit;
+            font-weight: 700;
+            padding: 0.55rem 0.75rem;
+          }
+        </style>
+        <button>
+          In stock
+        </button>
+      </template></product-badge>
+
+        <h3 id="handle-async-states-explicitly">Handle async states explicitly</h3>
+        <p>Keep loading, success, and failure visible in render code. This makes state transitions easier to review and test.</p>
+        <pre><code>const result = signal({ phase: "loading", data: null, error: null });
+
+return html`
+  ${match(result())
+    .when((state) =&gt; state.phase === "loading", () =&gt; html`&lt;p&gt;Loading&lt;/p&gt;`)
+    .when((state) =&gt; state.phase === "success", ({ data }) =&gt; html`&lt;p&gt;${data.title}&lt;/p&gt;`)
+    .otherwise(({ error }) =&gt; html`&lt;p&gt;${error?.message ?? "Failed"}&lt;/p&gt;`)}
+`;</code></pre>
+      </article>
+
+            </main>
+            <footer class="site-footer">
+              <p>CE docs describe the runtime surface, component model, release gates, and playground examples in-place.</p>
+            </footer>
+          </div>
+          <aside class="docs-toc" aria-label="On this page">
+            <nav class="generated-toc" aria-label="On this page">
+              <h2>On this page</h2>
+              <ul>
+                <li><a href="#usage" data-depth="2">Usage</a></li>
+                <li><a href="#install-the-web-runtime" data-depth="3">Install the web runtime</a></li>
+                <li><a href="#define-a-component" data-depth="3">Define a component</a></li>
+                <li><a href="#render-it-in-html" data-depth="3">Render it in HTML</a></li>
+                <li><a href="#generated-static-snapshot" data-depth="3">Generated static snapshot</a></li>
+                <li><a href="#handle-async-states-explicitly" data-depth="3">Handle async states explicitly</a></li>
+              </ul>
+            </nav>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </docs-page>
   </body>
 </html>

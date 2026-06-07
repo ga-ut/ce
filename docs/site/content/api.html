@@ -1,61 +1,8 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CE Docs Site | API</title>
-    <link rel="stylesheet" href="assets/styles.css?v=20260607-static-docs" />
-  </head>
-  <body>
-<docs-page>
-    <div class="site-page">
-      <header class="site-header">
-        <div class="site-header__inner">
-          <h1 class="site-title">CE Docs Site</h1>
-          <nav class="site-nav" aria-label="Primary navigation">
-            <a href="index.html">Overview</a>
-              <a href="usage.html">Usage</a>
-              <a href="api.html" aria-current="page">API</a>
-              <a href="components.html">Components</a>
-              <a href="roadmap.html">Roadmap</a>
-              <a href="release.html">Release</a>
-              <a href="playground.html">Playground</a>
-          </nav>
-        </div>
-      </header>
-      <div class="site-shell">
-        <div class="docs-layout">
-          <aside class="docs-sidebar" aria-label="Documentation sections">
-            <section class="docs-nav-group">
-              <h2>Start</h2>
-              <ul>
-                <li><a href="index.html">Overview</a></li>
-                <li><a href="usage.html">Usage guide</a></li>
-                <li><a href="playground.html">Playground</a></li>
-              </ul>
-            </section>
-            <section class="docs-nav-group">
-              <h2>Reference</h2>
-              <ul>
-                <li><a href="api.html" aria-current="page">Public API</a></li>
-                <li><a href="components.html">Component model</a></li>
-                <li><a href="roadmap.html">Roadmap</a></li>
-              </ul>
-            </section>
-            <section class="docs-nav-group">
-              <h2>Project</h2>
-              <ul>
-                <li><a href="release.html">Release process</a></li>
-              </ul>
-            </section>
-          </aside>
-          <div class="docs-main">
-            <main>
-                    <article class="doc-page">
-        <h2 id="ce-public-api">CE Public API</h2>
+      <article class="doc-page">
+        <h2>CE Public API</h2>
         <p>The web entrypoint is the public runtime surface for custom elements, signals, templates, routing, and static rendering helpers.</p>
 
-        <h3 id="import-paths">Import paths</h3>
+        <h3>Import paths</h3>
         <pre><code>import {
   define,
   derived,
@@ -71,7 +18,7 @@
 import * as core from "@ga-ut/ce";
 import * as coreOnly from "@ga-ut/ce/core";</code></pre>
 
-        <h3 id="component-api">Component API</h3>
+        <h3>Component API</h3>
         <h4>define(component, options?)</h4>
         <pre><code>define(function MyCounter({ props, lifecycle }) {
   const count = signal(props.initial ?? 0);
@@ -128,7 +75,7 @@ const unsubscribe = count.subscribe((value) =&gt; console.log(value));</code></p
 `</code></pre>
         <p>Signals patch text and attribute positions directly. Non-signal render callback values participate in structural rerenders.</p>
 
-        <h3 id="router-api">Router API</h3>
+        <h3>Router API</h3>
         <h4>setEntryPoint(entryPoint, options?)</h4>
         <p>Sets the router mount element. CE reuses an existing matching element or creates one.</p>
 
@@ -141,7 +88,7 @@ const unsubscribe = count.subscribe((value) =&gt; console.log(value));</code></p
 setEntryPoint("ce-entry");
 await navigate("/users");</code></pre>
 
-        <h3 id="static-snapshot-api">Static Snapshot API</h3>
+        <h3>Static Snapshot API</h3>
         <h4>renderStatic(component, options?)</h4>
         <pre><code>const markup = await renderStatic&lt;{ initial: NumberConstructor }&gt;(
   function StaticCounter({ props }) {
@@ -175,7 +122,7 @@ await navigate("/users");</code></pre>
         </ul>
         <p>Use <code>mode: "light-dom"</code> when the static output should be emitted as normal children instead of Declarative Shadow DOM.</p>
 
-        <h3 id="static-site-cli">Static Site CLI</h3>
+        <h3>Static Site CLI</h3>
         <p>Create an entry module that exports pages:</p>
         <pre><code>import { html, signal } from "@ga-ut/ce/web";
 
@@ -195,36 +142,10 @@ export const pages = [
         <pre><code>npx @ga-ut/ce build --entry ./pages.mjs --out ./dist</code></pre>
         <p>The CLI imports the entry, calls <code>renderStatic</code> for each page component, and writes complete HTML files to the output directory.</p>
 
-        <h3 id="semver-policy">SemVer policy</h3>
+        <h3>SemVer policy</h3>
         <ul>
           <li><strong>MAJOR:</strong> public signature changes, component lifecycle behavior changes, or routing contract changes.</li>
           <li><strong>MINOR:</strong> new optional parameters and non-breaking helpers.</li>
           <li><strong>PATCH:</strong> bug fixes and performance improvements with the same public contract.</li>
         </ul>
       </article>
-
-            </main>
-            <footer class="site-footer">
-              <p>CE docs describe the runtime surface, component model, release gates, and playground examples in-place.</p>
-            </footer>
-          </div>
-          <aside class="docs-toc" aria-label="On this page">
-            <nav class="generated-toc" aria-label="On this page">
-              <h2>On this page</h2>
-              <ul>
-                <li><a href="#ce-public-api" data-depth="2">CE Public API</a></li>
-                <li><a href="#import-paths" data-depth="3">Import paths</a></li>
-                <li><a href="#component-api" data-depth="3">Component API</a></li>
-                <li><a href="#router-api" data-depth="3">Router API</a></li>
-                <li><a href="#static-snapshot-api" data-depth="3">Static Snapshot API</a></li>
-                <li><a href="#static-site-cli" data-depth="3">Static Site CLI</a></li>
-                <li><a href="#semver-policy" data-depth="3">SemVer policy</a></li>
-              </ul>
-            </nav>
-          </aside>
-        </div>
-      </div>
-    </div>
-  </docs-page>
-  </body>
-</html>

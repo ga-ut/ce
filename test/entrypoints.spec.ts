@@ -11,7 +11,9 @@ describe("entrypoint boundaries", () => {
   it("exposes web runtime APIs from the web entrypoint", async () => {
     const webEntry = await import("../packages/ce/src/web");
 
-    expect(typeof webEntry.CE.define).toBe("function");
+    expect("CE" in webEntry).toBe(false);
+    expect(typeof webEntry.define).toBe("function");
+    expect(typeof webEntry.signal).toBe("function");
     expect(typeof webEntry.html).toBe("function");
   });
 });

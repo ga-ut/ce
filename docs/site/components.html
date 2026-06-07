@@ -4,22 +4,105 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CE Docs Site | Components</title>
-    <link rel="stylesheet" href="assets/styles.css?v=20260607-ce-doc-pages" />
-    <script type="module" src="assets/app.js?v=20260607-ce-doc-shell"></script>
+    <link rel="stylesheet" href="assets/styles.css?v=20260607-static-docs" />
   </head>
-  <body data-page="components">
-    <main>
-      <section class="card">
-        <h2>Components</h2>
-        <p>Components are defined with named functions, signals, derived values, and inline function handlers.</p>
-      </section>
-      <section class="card">
-        <h2>Related Docs</h2>
-        <ol>
-          <li><a href="api.html">API contract details</a></li>
-          <li><a href="release.html">Release and rollback policy</a></li>
-        </ol>
-      </section>
-    </main>
+  <body>
+<docs-page>
+    <div class="site-page">
+      <header class="site-header">
+        <div class="site-header__inner">
+          <h1 class="site-title">CE Docs Site</h1>
+          <nav class="site-nav" aria-label="Primary navigation">
+            <a href="index.html">Overview</a>
+              <a href="usage.html">Usage</a>
+              <a href="api.html">API</a>
+              <a href="components.html" aria-current="page">Components</a>
+              <a href="roadmap.html">Roadmap</a>
+              <a href="release.html">Release</a>
+              <a href="playground.html">Playground</a>
+          </nav>
+        </div>
+      </header>
+      <div class="site-shell">
+        <div class="docs-layout">
+          <aside class="docs-sidebar" aria-label="Documentation sections">
+            <section class="docs-nav-group">
+              <h2>Start</h2>
+              <ul>
+                <li><a href="index.html">Overview</a></li>
+                <li><a href="usage.html">Usage guide</a></li>
+                <li><a href="playground.html">Playground</a></li>
+              </ul>
+            </section>
+            <section class="docs-nav-group">
+              <h2>Reference</h2>
+              <ul>
+                <li><a href="api.html">Public API</a></li>
+                <li><a href="components.html" aria-current="page">Component model</a></li>
+                <li><a href="roadmap.html">Roadmap</a></li>
+              </ul>
+            </section>
+            <section class="docs-nav-group">
+              <h2>Project</h2>
+              <ul>
+                <li><a href="release.html">Release process</a></li>
+              </ul>
+            </section>
+          </aside>
+          <div class="docs-main">
+            <main>
+                    <article class="doc-page">
+        <h2 id="components">Components</h2>
+        <p>CE components are custom elements with a compact setup surface. They keep rendering, state, props, lifecycle cleanup, and handlers together.</p>
+
+        <h3 id="naming">Naming</h3>
+        <p>The function name is converted to a custom element tag. This keeps the registration point short and avoids duplicating the tag string.</p>
+        <pre><code>define(function UserMenu() {
+  return html`&lt;button&gt;Account&lt;/button&gt;`;
+});
+
+// Registers &lt;user-menu&gt;</code></pre>
+
+        <h3 id="props">Props</h3>
+        <p>Props are declared beside the component and parsed from attributes. Use them for initial values and external configuration.</p>
+        <pre><code>define(function PriceLabel({ props }) {
+  return html`&lt;span&gt;${props.currency} ${props.amount}&lt;/span&gt;`;
+}, {
+  props: {
+    currency: String,
+    amount: Number
+  }
+});</code></pre>
+
+        <h3 id="state">State</h3>
+        <p>Signals are for local mutable values. Derived signals compute from other signals and update their rendered positions without rerunning unrelated DOM.</p>
+        <pre><code>const count = signal(1);
+const doubled = derived(() =&gt; count() * 2);</code></pre>
+
+        <h3 id="cleanup">Cleanup</h3>
+        <p>Use lifecycle cleanup for timers, observers, subscriptions, and request cancellation. Cleanup runs when the element disconnects.</p>
+      </article>
+
+            </main>
+            <footer class="site-footer">
+              <p>CE docs describe the runtime surface, component model, release gates, and playground examples in-place.</p>
+            </footer>
+          </div>
+          <aside class="docs-toc" aria-label="On this page">
+            <nav class="generated-toc" aria-label="On this page">
+              <h2>On this page</h2>
+              <ul>
+                <li><a href="#components" data-depth="2">Components</a></li>
+                <li><a href="#naming" data-depth="3">Naming</a></li>
+                <li><a href="#props" data-depth="3">Props</a></li>
+                <li><a href="#state" data-depth="3">State</a></li>
+                <li><a href="#cleanup" data-depth="3">Cleanup</a></li>
+              </ul>
+            </nav>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </docs-page>
   </body>
 </html>

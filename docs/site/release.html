@@ -4,55 +4,126 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CE Docs Site | Release</title>
-    <link rel="stylesheet" href="assets/styles.css?v=20260607-ce-doc-pages" />
-    <script type="module" src="assets/app.js?v=20260607-ce-doc-shell"></script>
+    <link rel="stylesheet" href="assets/styles.css?v=20260607-static-docs" />
   </head>
-  <body data-page="release">
-    <main>
-      <section class="card doc-page">
-        <h2>Release, Verification, and Rollback</h2>
+  <body>
+<docs-page>
+    <div class="site-page">
+      <header class="site-header">
+        <div class="site-header__inner">
+          <h1 class="site-title">CE Docs Site</h1>
+          <nav class="site-nav" aria-label="Primary navigation">
+            <a href="index.html">Overview</a>
+              <a href="usage.html">Usage</a>
+              <a href="api.html">API</a>
+              <a href="components.html">Components</a>
+              <a href="roadmap.html">Roadmap</a>
+              <a href="release.html" aria-current="page">Release</a>
+              <a href="playground.html">Playground</a>
+          </nav>
+        </div>
+      </header>
+      <div class="site-shell">
+        <div class="docs-layout">
+          <aside class="docs-sidebar" aria-label="Documentation sections">
+            <section class="docs-nav-group">
+              <h2>Start</h2>
+              <ul>
+                <li><a href="index.html">Overview</a></li>
+                <li><a href="usage.html">Usage guide</a></li>
+                <li><a href="playground.html">Playground</a></li>
+              </ul>
+            </section>
+            <section class="docs-nav-group">
+              <h2>Reference</h2>
+              <ul>
+                <li><a href="api.html">Public API</a></li>
+                <li><a href="components.html">Component model</a></li>
+                <li><a href="roadmap.html">Roadmap</a></li>
+              </ul>
+            </section>
+            <section class="docs-nav-group">
+              <h2>Project</h2>
+              <ul>
+                <li><a href="release.html" aria-current="page">Release process</a></li>
+              </ul>
+            </section>
+          </aside>
+          <div class="docs-main">
+            <main>
+                    <article class="doc-page">
+        <h2 id="release-verification-and-rollback">Release, Verification, and Rollback</h2>
+        <p>Use this page before tagging a release or publishing the package. It separates runtime validation, package checks, and post-release safety work.</p>
 
-        <h3>CI gate</h3>
+        <h3 id="ci-gate">CI gate</h3>
         <p>Tag a release only when <code>lint + test + build</code> pass.</p>
 
-        <h3>Pre-publish verification</h3>
+        <h3 id="pre-publish-verification">Pre-publish verification</h3>
         <ol>
           <li><code>bun install</code></li>
           <li><code>npm run lint</code></li>
           <li><code>npm run test</code></li>
           <li><code>npm run build</code></li>
+          <li><code>npm run test:events</code></li>
+          <li><code>npm run docs:build</code></li>
+          <li><code>npm run docs:validate</code></li>
           <li><code>npm run pack:check</code></li>
-          <li>Confirm the document status board data was refreshed or explicitly marked as no-change.</li>
         </ol>
 
-        <h3>Publish</h3>
+        <h3 id="publish">Publish</h3>
         <p>Publish from <code>packages/ce</code> with <code>npm publish --access public</code>. Organization policy can override access mode.</p>
 
-        <h3>Release notes</h3>
+        <h3 id="release-notes">Release notes</h3>
         <ul>
           <li>Breaking changes</li>
           <li>Migration guide</li>
           <li>Affected API list</li>
         </ul>
 
-        <h4>Migration checklist for v2.0.0</h4>
+        <h4>Initial publish checklist for v0.1.0</h4>
         <ol>
-          <li>Replace all root imports with <code>@ga-ut/ce/web</code> for web runtime APIs.</li>
-          <li>Confirm consumers no longer import <code>CE</code> or <code>html</code> from the package root.</li>
-          <li>Run validation gates in this repository before publish.</li>
+          <li>Confirm <code>npm view @ga-ut/ce version</code> does not find an existing published package.</li>
+          <li>Use named web-runtime imports such as <code>import { define, html, signal } from "@ga-ut/ce/web";</code>.</li>
+          <li>Confirm consumers do not use legacy object definitions.</li>
+          <li>Use <code>ce-cli build --entry ./pages.mjs --out ./dist</code> for CE-based static sites.</li>
+          <li>Publish from a matching <code>v0.1.0</code> tag only.</li>
         </ol>
 
-        <h3>Post-release smoke test</h3>
+        <h3 id="post-release-smoke-test">Post-release smoke test</h3>
         <ul>
           <li>Route transitions</li>
           <li>State updates</li>
           <li>Event handling</li>
+          <li>Static page generation through <code>ce-cli</code></li>
           <li>Published Pages status board timestamp</li>
         </ul>
 
-        <h3>Rollback safety</h3>
+        <h3 id="rollback-safety">Rollback safety</h3>
         <p>If an issue is found, publish an immediate patch release with the fix and keep the rollback playbook in the release PR.</p>
-      </section>
-    </main>
+      </article>
+
+            </main>
+            <footer class="site-footer">
+              <p>CE docs describe the runtime surface, component model, release gates, and playground examples in-place.</p>
+            </footer>
+          </div>
+          <aside class="docs-toc" aria-label="On this page">
+            <nav class="generated-toc" aria-label="On this page">
+              <h2>On this page</h2>
+              <ul>
+                <li><a href="#release-verification-and-rollback" data-depth="2">Release, Verification, and Rollback</a></li>
+                <li><a href="#ci-gate" data-depth="3">CI gate</a></li>
+                <li><a href="#pre-publish-verification" data-depth="3">Pre-publish verification</a></li>
+                <li><a href="#publish" data-depth="3">Publish</a></li>
+                <li><a href="#release-notes" data-depth="3">Release notes</a></li>
+                <li><a href="#post-release-smoke-test" data-depth="3">Post-release smoke test</a></li>
+                <li><a href="#rollback-safety" data-depth="3">Rollback safety</a></li>
+              </ul>
+            </nav>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </docs-page>
   </body>
 </html>
