@@ -55,7 +55,10 @@ jobs:
         run: bun run verify:full
 
       - name: Publish package
-        run: bun publish --access public
+        run: |
+          set -euo pipefail
+          NPM_CONFIG_TOKEN="$(node ../../scripts/npm-oidc-token.mjs ./package.json)"
+          echo "::add-mask::$NPM_CONFIG_TOKEN"
+          export NPM_CONFIG_TOKEN
+          bun publish --access public
         working-directory: packages/ce
-        env:
-          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}

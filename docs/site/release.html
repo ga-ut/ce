@@ -54,7 +54,7 @@
         &lt;/ol&gt;
 
         &lt;h3 id=&quot;publish&quot;&gt;Publish&lt;/h3&gt;
-        &lt;p&gt;Run the &lt;code&gt;Publish npm package&lt;/code&gt; GitHub workflow from the matching &lt;code&gt;vX.Y.Z&lt;/code&gt; tag. The workflow uses Bun for install, validation, build, and &lt;code&gt;bun publish --access public&lt;/code&gt;. Bun publish reads the npm automation token from the repository &lt;code&gt;NPM_TOKEN&lt;/code&gt; secret through &lt;code&gt;NPM_CONFIG_TOKEN&lt;/code&gt;. Organization policy can override access mode.&lt;/p&gt;
+        &lt;p&gt;Run the &lt;code&gt;Publish npm package&lt;/code&gt; GitHub workflow from the matching &lt;code&gt;vX.Y.Z&lt;/code&gt; tag. The workflow uses Bun for install, validation, build, and &lt;code&gt;bun publish --access public&lt;/code&gt;. It exchanges the GitHub Actions OIDC token for a short-lived npm token, passes it to Bun through &lt;code&gt;NPM_CONFIG_TOKEN&lt;/code&gt;, and does not require a long-lived npm secret. Organization policy can override access mode.&lt;/p&gt;
 
         &lt;h3 id=&quot;release-notes&quot;&gt;Release notes&lt;/h3&gt;
         &lt;ul&gt;
@@ -159,7 +159,7 @@
         </ol>
 
         <h3 id="publish">Publish</h3>
-        <p>Run the <code>Publish npm package</code> GitHub workflow from the matching <code>vX.Y.Z</code> tag. The workflow uses Bun for install, validation, build, and <code>bun publish --access public</code>. Bun publish reads the npm automation token from the repository <code>NPM_TOKEN</code> secret through <code>NPM_CONFIG_TOKEN</code>. Organization policy can override access mode.</p>
+        <p>Run the <code>Publish npm package</code> GitHub workflow from the matching <code>vX.Y.Z</code> tag. The workflow uses Bun for install, validation, build, and <code>bun publish --access public</code>. It exchanges the GitHub Actions OIDC token for a short-lived npm token, passes it to Bun through <code>NPM_CONFIG_TOKEN</code>, and does not require a long-lived npm secret. Organization policy can override access mode.</p>
 
         <h3 id="release-notes">Release notes</h3>
         <ul>

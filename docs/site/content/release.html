@@ -18,7 +18,7 @@
         </ol>
 
         <h3>Publish</h3>
-        <p>Run the <code>Publish npm package</code> GitHub workflow from the matching <code>vX.Y.Z</code> tag. The workflow uses Bun for install, validation, build, and <code>bun publish --access public</code>. Bun publish reads the npm automation token from the repository <code>NPM_TOKEN</code> secret through <code>NPM_CONFIG_TOKEN</code>. Organization policy can override access mode.</p>
+        <p>Run the <code>Publish npm package</code> GitHub workflow from the matching <code>vX.Y.Z</code> tag. The workflow uses Bun for install, validation, build, and <code>bun publish --access public</code>. It exchanges the GitHub Actions OIDC token for a short-lived npm token, passes it to Bun through <code>NPM_CONFIG_TOKEN</code>, and does not require a long-lived npm secret. Organization policy can override access mode.</p>
 
         <h3>Release notes</h3>
         <ul>

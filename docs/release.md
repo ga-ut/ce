@@ -17,7 +17,7 @@
 ## Publish
 - Preferred path: run the `Publish npm package` GitHub workflow from the matching `vX.Y.Z` tag.
 - The workflow uses Bun for install, validation, build, and `bun publish --access public`.
-- Bun publish reads the npm automation token from the repository `NPM_TOKEN` secret through `NPM_CONFIG_TOKEN`.
+- The workflow exchanges the GitHub Actions OIDC token for a short-lived npm token, passes it to Bun through `NPM_CONFIG_TOKEN`, and does not require a long-lived npm secret.
 - Organization/private policy can override access mode.
 
 ## Release notes
