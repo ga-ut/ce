@@ -4,6 +4,7 @@
 
         <h3>Import paths</h3>
         <pre><code>import {
+  config,
   define,
   derived,
   effect,
@@ -11,7 +12,6 @@
   match,
   navigate,
   renderStatic,
-  setEntryPoint,
   signal,
 } from "@ga-ut/ce/web";
 
@@ -75,17 +75,50 @@ const unsubscribe = count.subscribe((value) =&gt; console.log(value));</code></p
 `</code></pre>
         <p>Signals patch text and attribute positions directly. Non-signal render callback values participate in structural rerenders.</p>
 
+        <h3>Runtime Config</h3>
+        <h4>config(options?)</h4>
+        <p>Configures runtime-wide behavior for CE web components. Global styles are shared across shadow roots through <code>adoptedStyleSheets</code> when the browser supports it, with a scoped <code>&lt;style&gt;</code> fallback for environments that do not.</p>
+        <pre><code>import { config, define, html } from "@ga-ut/ce/web";
+import styles from "./ce.css?inline";
+
+const homePage = define(function HomePage() {
+  return html`&lt;main class="grid gap-4 p-4"&gt;Home&lt;/main&gt;`;
+});
+
+config({
+  globalStyles: [styles],
+  entryPoint: {
+    selector: "ce-app",
+    rootElement: document.querySelector("#app"),
+    hydrate: false
+  },
+  routes: [
+    {
+      path: "/",
+      tag: homePage
+    }
+  ]
+});</code></pre>
+        <p><code>globalStyles</code> accepts compiled CSS strings or <code>CSSStyleSheet</code> instances. CSS generation stays with the app toolchain, such as Vite, PostCSS, Tailwind CSS, UnoCSS, or plain CSS. CE only adopts the resulting stylesheet inside component shadow roots.</p>
+
         <h3>Router API</h3>
-        <h4>setEntryPoint(entryPoint, options?)</h4>
-        <p>Sets the router mount element. CE reuses an existing matching element or creates one.</p>
 
         <h4>navigate(path)</h4>
-        <p>Supports history paths such as <code>/users</code> and hash paths such as <code>#/users</code>, then renders the registered route.</p>
-        <pre><code>define(function UsersPage() {
+        <p>Supports history paths such as <code>/users</code> and hash paths such as <code>#/users</code>, then renders the route registered through <code>config({ routes })</code>.</p>
+        <pre><code>const usersPage = define(function UsersPage() {
   return html`&lt;h1&gt;Users&lt;/h1&gt;`;
-}, { route: "/users" });
+});
 
-setEntryPoint("ce-entry");
+config({
+  entryPoint: "ce-entry",
+  routes: [
+    {
+      path: "/users",
+      tag: usersPage
+    }
+  ]
+});
+
 await navigate("/users");</code></pre>
 
         <h3>Static Snapshot API</h3>
@@ -122,25 +155,44 @@ await navigate("/users");</code></pre>
         </ul>
         <p>Use <code>mode: "light-dom"</code> when the static output should be emitted as normal children instead of Declarative Shadow DOM.</p>
 
-        <h3>Static Site CLI</h3>
-        <p>Create an entry module that exports pages:</p>
-        <pre><code>import { html, signal } from "@ga-ut/ce/web";
+        <h3>App Build CLI</h3>
+        <p>Create a browser entry that configures the CE app:</p>
+        <pre><code>import { config, define, html } from "@ga-ut/ce/web";
+import styles from "ce:styles";
 
-function HomePage() {
-  const title = signal("CE Static Site");
-  return html`&lt;main&gt;&lt;h1&gt;${title}&lt;/h1&gt;&lt;/main&gt;`;
-}
+const homePageTag = define(function HomePage() {
+  return html`&lt;main class="p-4"&gt;&lt;h1&gt;CE App&lt;/h1&gt;&lt;/main&gt;`;
+});
 
-export const pages = [
-  {
-    path: "index.html",
-    title: "CE Static Site",
-    component: HomePage
-  }
-];</code></pre>
-        <p>Then generate static HTML locally or in CI:</p>
-        <pre><code>npx @ga-ut/ce build --entry ./pages.mjs --out ./dist</code></pre>
-        <p>The CLI imports the entry, calls <code>renderStatic</code> for each page component, and writes complete HTML files to the output directory.</p>
+config({
+  globalStyles: [styles],
+  entryPoint: "ce-app",
+  routes: [{ path: "/", tag: homePageTag }]
+});</code></pre>
+        <p>Then generate an app shell and bundled browser module locally or in CI:</p>
+        <pre><code>npx --package @ga-ut/ce ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css</code></pre>
+        <p>The command writes <code>dist/index.html</code> and <code>dist/app.js</code>. Use <code>--root</code> to choose the generated root custom element tag and <code>--title</code> to set the document title.</p>
+        <pre><code>npx --package @ga-ut/ce ce-cli build \
+  --entry ./src/main.js \
+  --out ./dist \
+  --css ./src/ce.css \
+  --root ce-app \
+  --title "CE App"</code></pre>
+
+        <h3>Browser Bundle CLI</h3>
+        <p>Use <code>bundle</code> when you only want one browser ESM file without the generated HTML shell:</p>
+        <pre><code>npx --package @ga-ut/ce ce-cli bundle --entry ./src/main.js --out ./dist/app.js --css ./src/ce.css</code></pre>
+        <p>The bundle command supports static relative imports, <code>@ga-ut/ce/web</code>, and a virtual <code>ce:styles</code> import:</p>
+        <pre><code>import { config } from "@ga-ut/ce/web";
+import styles from "ce:styles";
+import { routes } from "./routes.js";
+
+config({
+  globalStyles: [styles],
+  entryPoint: "ce-app",
+  routes
+});</code></pre>
+        <p>The bundled entry supports static relative imports, <code>@ga-ut/ce/web</code>, and <code>ce:styles</code>. It intentionally does not transpile TypeScript, process JSX, resolve arbitrary <code>node_modules</code>, minify, or support dynamic <code>import()</code>. Existing app bundlers can still consume CE normally through <code>@ga-ut/ce/web</code>; the CLI is a small CE-focused path for projects that do not want another bundler.</p>
 
         <h3>SemVer policy</h3>
         <ul>

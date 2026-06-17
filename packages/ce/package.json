@@ -1,7 +1,7 @@
 {
   "name": "@ga-ut/ce",
   "version": "0.1.0",
-  "description": "Custom Elements runtime with signals and static page generation",
+  "description": "Custom Elements runtime with signals, routing, and dependency-free app bundling",
   "license": "ISC",
   "repository": {
     "type": "git",

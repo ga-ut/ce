@@ -7,7 +7,59 @@
     <link rel="stylesheet" href="assets/styles.css?v=20260607-static-docs" />
   </head>
   <body>
-<docs-page>
+<docs-page top-nav="&lt;a href=&quot;index.html&quot;&gt;Overview&lt;/a&gt;
+              &lt;a href=&quot;usage.html&quot;&gt;Usage&lt;/a&gt;
+              &lt;a href=&quot;api.html&quot;&gt;API&lt;/a&gt;
+              &lt;a href=&quot;components.html&quot;&gt;Components&lt;/a&gt;
+              &lt;a href=&quot;roadmap.html&quot; aria-current=&quot;page&quot;&gt;Roadmap&lt;/a&gt;
+              &lt;a href=&quot;release.html&quot;&gt;Release&lt;/a&gt;
+              &lt;a href=&quot;playground.html&quot;&gt;Playground&lt;/a&gt;" side-nav="&lt;section class=&quot;docs-nav-group&quot;&gt;
+              &lt;h2&gt;Start&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;index.html&quot;&gt;Overview&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;usage.html&quot;&gt;Usage guide&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;playground.html&quot;&gt;Playground&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/section&gt;
+            &lt;section class=&quot;docs-nav-group&quot;&gt;
+              &lt;h2&gt;Reference&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;api.html&quot;&gt;Public API&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;components.html&quot;&gt;Component model&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;roadmap.html&quot; aria-current=&quot;page&quot;&gt;Roadmap&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/section&gt;
+            &lt;section class=&quot;docs-nav-group&quot;&gt;
+              &lt;h2&gt;Project&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;release.html&quot;&gt;Release process&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/section&gt;" content="      &lt;article class=&quot;doc-page&quot;&gt;
+        &lt;h2 id=&quot;roadmap&quot;&gt;Roadmap&lt;/h2&gt;
+        &lt;p&gt;Roadmap decisions are evaluated against runtime size, custom element compatibility, and the validation gates required before release.&lt;/p&gt;
+
+        &lt;h3 id=&quot;current-focus&quot;&gt;Current focus&lt;/h3&gt;
+        &lt;p&gt;The current direction is to make function components, signals, derived values, explicit state matching, and the playground examples feel coherent as one API.&lt;/p&gt;
+
+        &lt;h3 id=&quot;compatibility-rules&quot;&gt;Compatibility rules&lt;/h3&gt;
+        &lt;p&gt;Runtime changes should preserve existing custom element behavior unless a major version explicitly documents the migration. New helpers should be optional and additive.&lt;/p&gt;
+
+        &lt;h3 id=&quot;documentation-rules&quot;&gt;Documentation rules&lt;/h3&gt;
+        &lt;p&gt;Docs pages should explain the behavior directly on the page. Navigation and table-of-contents links help movement, but they should not replace the explanation.&lt;/p&gt;
+
+        &lt;h3 id=&quot;release-readiness&quot;&gt;Release readiness&lt;/h3&gt;
+        &lt;p&gt;A roadmap item is not ready to publish until source validation, event behavior tests, docs validation, and package build checks match the files changed.&lt;/p&gt;
+      &lt;/article&gt;
+" toc="&lt;nav class=&quot;generated-toc&quot; aria-label=&quot;On this page&quot;&gt;
+              &lt;h2&gt;On this page&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;#roadmap&quot; data-depth=&quot;2&quot;&gt;Roadmap&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#current-focus&quot; data-depth=&quot;3&quot;&gt;Current focus&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#compatibility-rules&quot; data-depth=&quot;3&quot;&gt;Compatibility rules&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#documentation-rules&quot; data-depth=&quot;3&quot;&gt;Documentation rules&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#release-readiness&quot; data-depth=&quot;3&quot;&gt;Release readiness&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/nav&gt;">
     <div class="site-page">
       <header class="site-header">
         <div class="site-header__inner">

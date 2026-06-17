@@ -30,7 +30,7 @@ Must include:
 2. Confirm consumers use named web-runtime imports:
    - `import { define, html, signal } from "@ga-ut/ce/web";`
 3. Confirm consumers do not use legacy object definitions.
-4. Use `ce-cli build --entry ./pages.mjs --out ./dist` for static page generation when a site is built from CE page components.
+4. Use `ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css` when a CE app is built without an external bundler.
 5. Publish from a matching `v0.1.0` tag only.
 6. Run validation gates in this repository before publish.
 
@@ -39,7 +39,7 @@ Validate with sample app:
 - Route transitions
 - State updates
 - Event handling
-- Static page generation through `ce-cli`
+- App build through `ce-cli`
 
 Also confirm the published Pages status board shows the latest status dataset timestamp.
 

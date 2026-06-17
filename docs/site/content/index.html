@@ -65,6 +65,25 @@ define(function UserCounter({ props, lifecycle }) {
       </section>
 
       <section class="docs-section">
+        <h2>Install and start</h2>
+        <p>Install the runtime, import the web entrypoint, then call <code>config()</code> once from the browser entry.</p>
+        <pre><code>npm i @ga-ut/ce</code></pre>
+        <pre><code>import { config, define, html, signal } from "@ga-ut/ce/web";
+import styles from "./ce.css?inline";
+
+const appTag = define(function AppPage() {
+  const count = signal(0);
+  return html`&lt;button onclick=${() =&gt; count.update((value) =&gt; value + 1)}&gt;${count}&lt;/button&gt;`;
+});
+
+config({
+  globalStyles: [styles],
+  entryPoint: "ce-app",
+  routes: [{ path: "/", tag: appTag }]
+});</code></pre>
+      </section>
+
+      <section class="docs-section">
         <h2>Core ideas</h2>
         <div class="concept-grid">
           <article class="concept">
@@ -78,6 +97,14 @@ define(function UserCounter({ props, lifecycle }) {
           <article class="concept">
             <h3>Explicit states</h3>
             <p><code>match</code> keeps loading, success, and failure branches visible in render code.</p>
+          </article>
+          <article class="concept">
+            <h3>Shared styles</h3>
+            <p><code>globalStyles</code> accepts compiled CSS from Tailwind, PostCSS, Vite inline CSS, or plain CSS and shares it across shadow roots.</p>
+          </article>
+          <article class="concept">
+            <h3>Small app build</h3>
+            <p><code>ce-cli build</code> can emit an app shell and browser module for CE apps without adding a project bundler.</p>
           </article>
         </div>
       </section>

@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { derived, html, renderStatic, signal } from '../../dist/web/index.mjs';
 
@@ -202,28 +202,43 @@ function DocsPage({ props }) {
 
 const staticBlocks = await renderStaticBlocks();
 
-export const pages = await Promise.all(
-  pageMeta.map(async (page) => {
-    const sourceContent = await readFile(path.join(contentRoot, page.path), 'utf8');
-    const contentWithBlocks = applyStaticBlocks(sourceContent, staticBlocks);
-    const content = addHeadingIds(contentWithBlocks);
-    const toc = renderToc(extractToc(content));
-    const scripts = page.key === 'playground'
-      ? '    <script defer src="assets/playground.js?v=20260607-js-visible"></script>\n'
-      : '';
+function renderDocument(page, body, head) {
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CE Docs Site | ${page.title}</title>
+${head}  </head>
+  <body>
+${body}
+  </body>
+</html>
+`;
+}
 
-    return {
-      path: page.path,
-      title: `CE Docs Site | ${page.title}`,
-      component: DocsPage,
-      mode: 'light-dom',
-      head: `    <link rel="stylesheet" href="assets/styles.css?v=20260607-static-docs" />\n${scripts}`,
-      props: {
-        topNav: renderTopNav(page.key),
-        sideNav: renderSideNav(page.key),
-        content,
-        toc,
-      },
-    };
-  })
-);
+for (const page of pageMeta) {
+  const sourceContent = await readFile(path.join(contentRoot, page.path), 'utf8');
+  const contentWithBlocks = applyStaticBlocks(sourceContent, staticBlocks);
+  const content = addHeadingIds(contentWithBlocks);
+  const toc = renderToc(extractToc(content));
+  const scripts = page.key === 'playground'
+    ? '    <script defer src="assets/playground.js?v=20260607-js-visible"></script>\n'
+    : '';
+  const head = `    <link rel="stylesheet" href="assets/styles.css?v=20260607-static-docs" />\n${scripts}`;
+  const body = await renderStatic(DocsPage, {
+    mode: 'light-dom',
+    props: {
+      topNav: renderTopNav(page.key),
+      sideNav: renderSideNav(page.key),
+      content,
+      toc,
+    },
+  });
+  const outputPath = path.join(siteRoot, page.path);
+
+  await mkdir(path.dirname(outputPath), { recursive: true });
+  await writeFile(outputPath, renderDocument(page, body, head));
+}
+
+console.log(`Generated ${pageMeta.length} docs page(s) in ${siteRoot}.`);

@@ -8,7 +8,103 @@
     <script defer src="assets/playground.js?v=20260607-js-visible"></script>
   </head>
   <body>
-<docs-page>
+<docs-page top-nav="&lt;a href=&quot;index.html&quot;&gt;Overview&lt;/a&gt;
+              &lt;a href=&quot;usage.html&quot;&gt;Usage&lt;/a&gt;
+              &lt;a href=&quot;api.html&quot;&gt;API&lt;/a&gt;
+              &lt;a href=&quot;components.html&quot;&gt;Components&lt;/a&gt;
+              &lt;a href=&quot;roadmap.html&quot;&gt;Roadmap&lt;/a&gt;
+              &lt;a href=&quot;release.html&quot;&gt;Release&lt;/a&gt;
+              &lt;a href=&quot;playground.html&quot; aria-current=&quot;page&quot;&gt;Playground&lt;/a&gt;" side-nav="&lt;section class=&quot;docs-nav-group&quot;&gt;
+              &lt;h2&gt;Start&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;index.html&quot;&gt;Overview&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;usage.html&quot;&gt;Usage guide&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;playground.html&quot; aria-current=&quot;page&quot;&gt;Playground&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/section&gt;
+            &lt;section class=&quot;docs-nav-group&quot;&gt;
+              &lt;h2&gt;Reference&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;api.html&quot;&gt;Public API&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;components.html&quot;&gt;Component model&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;roadmap.html&quot;&gt;Roadmap&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/section&gt;
+            &lt;section class=&quot;docs-nav-group&quot;&gt;
+              &lt;h2&gt;Project&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;release.html&quot;&gt;Release process&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/section&gt;" content="      &lt;section class=&quot;card&quot;&gt;
+        &lt;h2 id=&quot;playground&quot;&gt;Playground&lt;/h2&gt;
+        &lt;p&gt;
+          Use this isolated workspace to test HTML, CSS, JavaScript, and CE examples quickly.
+          Press &lt;strong&gt;Run&lt;/strong&gt; to render the preview.
+        &lt;/p&gt;
+        &lt;p class=&quot;status&quot;&gt;Playground code runs only in the browser and does not modify repository source files.&lt;/p&gt;
+      &lt;/section&gt;
+
+      &lt;section class=&quot;card playground&quot; aria-label=&quot;Interactive playground&quot;&gt;
+        &lt;div class=&quot;playground__presets&quot; role=&quot;group&quot; aria-label=&quot;Playground presets&quot;&gt;
+          &lt;button type=&quot;button&quot; data-playground-preset=&quot;fine&quot;&gt;Fine-grained counter&lt;/button&gt;
+          &lt;button type=&quot;button&quot; data-playground-preset=&quot;todo&quot;&gt;Todo list&lt;/button&gt;
+          &lt;button type=&quot;button&quot; data-playground-preset=&quot;products&quot;&gt;Product cards&lt;/button&gt;
+          &lt;button type=&quot;button&quot; data-playground-preset=&quot;tabs&quot;&gt;Tabs&lt;/button&gt;
+          &lt;button type=&quot;button&quot; data-playground-preset=&quot;ce&quot;&gt;CE + Shadow DOM&lt;/button&gt;
+          &lt;button type=&quot;button&quot; data-playground-preset=&quot;basic&quot;&gt;Basic example&lt;/button&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;playground__controls&quot;&gt;
+          &lt;button type=&quot;button&quot; data-playground-run&gt;Run&lt;/button&gt;
+          &lt;button type=&quot;button&quot; data-playground-reset&gt;Reset&lt;/button&gt;
+          &lt;span class=&quot;status&quot; data-playground-status&gt;Ready&lt;/span&gt;
+        &lt;/div&gt;
+
+        &lt;div class=&quot;playground__layout&quot;&gt;
+          &lt;div class=&quot;playground__editors&quot;&gt;
+            &lt;label class=&quot;code-editor&quot;&gt;
+              &lt;span class=&quot;code-editor__bar&quot;&gt;HTML&lt;/span&gt;
+              &lt;span class=&quot;code-editor__body&quot;&gt;
+                &lt;span class=&quot;code-editor__lines&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;
+                &lt;span class=&quot;code-editor__pane&quot;&gt;
+                  &lt;pre class=&quot;code-editor__highlight&quot; aria-hidden=&quot;true&quot;&gt;&lt;code&gt;&lt;/code&gt;&lt;/pre&gt;
+                  &lt;textarea data-editor=&quot;html&quot; spellcheck=&quot;false&quot;&gt;&lt;/textarea&gt;
+                &lt;/span&gt;
+              &lt;/span&gt;
+            &lt;/label&gt;
+            &lt;label class=&quot;code-editor&quot;&gt;
+              &lt;span class=&quot;code-editor__bar&quot;&gt;CSS&lt;/span&gt;
+              &lt;span class=&quot;code-editor__body&quot;&gt;
+                &lt;span class=&quot;code-editor__lines&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;
+                &lt;span class=&quot;code-editor__pane&quot;&gt;
+                  &lt;pre class=&quot;code-editor__highlight&quot; aria-hidden=&quot;true&quot;&gt;&lt;code&gt;&lt;/code&gt;&lt;/pre&gt;
+                  &lt;textarea data-editor=&quot;css&quot; spellcheck=&quot;false&quot;&gt;&lt;/textarea&gt;
+                &lt;/span&gt;
+              &lt;/span&gt;
+            &lt;/label&gt;
+            &lt;label class=&quot;code-editor&quot;&gt;
+              &lt;span class=&quot;code-editor__bar&quot;&gt;JS&lt;/span&gt;
+              &lt;span class=&quot;code-editor__body&quot;&gt;
+                &lt;span class=&quot;code-editor__lines&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;
+                &lt;span class=&quot;code-editor__pane&quot;&gt;
+                  &lt;pre class=&quot;code-editor__highlight&quot; aria-hidden=&quot;true&quot;&gt;&lt;code&gt;&lt;/code&gt;&lt;/pre&gt;
+                  &lt;textarea data-editor=&quot;js&quot; spellcheck=&quot;false&quot;&gt;&lt;/textarea&gt;
+                &lt;/span&gt;
+              &lt;/span&gt;
+            &lt;/label&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;playground__preview-wrap&quot;&gt;
+            &lt;h3 id=&quot;preview&quot;&gt;Preview&lt;/h3&gt;
+            &lt;iframe title=&quot;Playground preview&quot; data-playground-preview sandbox=&quot;allow-scripts&quot;&gt;&lt;/iframe&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/section&gt;
+" toc="&lt;nav class=&quot;generated-toc&quot; aria-label=&quot;On this page&quot;&gt;
+              &lt;h2&gt;On this page&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;#playground&quot; data-depth=&quot;2&quot;&gt;Playground&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#preview&quot; data-depth=&quot;3&quot;&gt;Preview&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/nav&gt;">
     <div class="site-page">
       <header class="site-header">
         <div class="site-header__inner">

@@ -1,6 +1,6 @@
 # @ga-ut/ce
 
-Custom Elements runtime with function components, signals, scoped rendering, optional routing, and static page generation.
+Custom Elements runtime with function components, signals, scoped rendering, optional routing, and a dependency-free app bundler.
 
 ## Install
 
@@ -8,10 +8,21 @@ Custom Elements runtime with function components, signals, scoped rendering, opt
 npm i @ga-ut/ce
 ```
 
+You can also run the CLI without installing it globally:
+
+```bash
+npx --package @ga-ut/ce ce-cli build --entry ./src/main.js --out ./dist
+```
+
 ## Runtime Usage
 
 ```ts
-import { define, derived, html, signal } from "@ga-ut/ce/web";
+import { config, define, derived, html, signal } from "@ga-ut/ce/web";
+import styles from "./ce.css?inline";
+
+config({
+  globalStyles: [styles],
+});
 
 define(function ProductBadge({ props }) {
   const selected = signal(false);
@@ -29,34 +40,56 @@ define(function ProductBadge({ props }) {
 });
 ```
 
-## Static Pages
+## App Build
 
-Create a page entry:
+Create a browser entry:
 
 ```js
-import { html, signal } from "@ga-ut/ce/web";
+import { config, define, html } from "@ga-ut/ce/web";
+import styles from "ce:styles";
 
-function HomePage() {
-  const title = signal("CE Static Site");
-  return html`<main><h1>${title}</h1></main>`;
-}
+const homePageTag = define(function HomePage() {
+  return html`<main class="p-4"><h1>CE App</h1></main>`;
+});
 
-export const pages = [
-  {
-    path: "index.html",
-    title: "CE Static Site",
-    component: HomePage,
-  },
-];
+config({
+  globalStyles: [styles],
+  entryPoint: "ce-app",
+  routes: [{ path: "/", tag: homePageTag }],
+});
 ```
 
-Generate HTML:
+Generate `index.html` and `app.js`:
 
 ```bash
-npx @ga-ut/ce build --entry ./pages.mjs --out ./dist
+npx --package @ga-ut/ce ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css
 ```
 
-The CLI calls `renderStatic` for each page component and writes complete HTML files. Declarative Shadow DOM is the default output mode.
+The build command bundles static relative imports, `@ga-ut/ce/web`, and optional `ce:styles` CSS into a browser ESM file. Use `--root` to choose the generated root custom element tag and `--title` to set the document title.
+
+## Browser Bundle
+
+Use `bundle` when you only want the browser ESM file:
+
+```bash
+npx --package @ga-ut/ce ce-cli bundle --entry ./src/main.js --out ./dist/app.js --css ./src/ce.css
+```
+
+Use the virtual `ce:styles` import to inject the CSS file as `globalStyles`:
+
+```js
+import { config } from "@ga-ut/ce/web";
+import styles from "ce:styles";
+import { routes } from "./routes.js";
+
+config({
+  globalStyles: [styles],
+  entryPoint: "ce-app",
+  routes,
+});
+```
+
+The CLI intentionally does not transpile TypeScript, process JSX, resolve arbitrary `node_modules`, minify, or support dynamic `import()`. Existing app bundlers can still consume CE normally through `@ga-ut/ce/web`; the CLI is a small CE-focused path for projects that do not want another bundler.
 
 ## Entry Points
 

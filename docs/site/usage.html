@@ -7,7 +7,121 @@
     <link rel="stylesheet" href="assets/styles.css?v=20260607-static-docs" />
   </head>
   <body>
-<docs-page>
+<docs-page top-nav="&lt;a href=&quot;index.html&quot;&gt;Overview&lt;/a&gt;
+              &lt;a href=&quot;usage.html&quot; aria-current=&quot;page&quot;&gt;Usage&lt;/a&gt;
+              &lt;a href=&quot;api.html&quot;&gt;API&lt;/a&gt;
+              &lt;a href=&quot;components.html&quot;&gt;Components&lt;/a&gt;
+              &lt;a href=&quot;roadmap.html&quot;&gt;Roadmap&lt;/a&gt;
+              &lt;a href=&quot;release.html&quot;&gt;Release&lt;/a&gt;
+              &lt;a href=&quot;playground.html&quot;&gt;Playground&lt;/a&gt;" side-nav="&lt;section class=&quot;docs-nav-group&quot;&gt;
+              &lt;h2&gt;Start&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;index.html&quot;&gt;Overview&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;usage.html&quot; aria-current=&quot;page&quot;&gt;Usage guide&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;playground.html&quot;&gt;Playground&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/section&gt;
+            &lt;section class=&quot;docs-nav-group&quot;&gt;
+              &lt;h2&gt;Reference&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;api.html&quot;&gt;Public API&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;components.html&quot;&gt;Component model&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;roadmap.html&quot;&gt;Roadmap&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/section&gt;
+            &lt;section class=&quot;docs-nav-group&quot;&gt;
+              &lt;h2&gt;Project&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;release.html&quot;&gt;Release process&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/section&gt;" content="      &lt;article class=&quot;doc-page&quot;&gt;
+        &lt;h2 id=&quot;usage&quot;&gt;Usage&lt;/h2&gt;
+        &lt;p&gt;Use CE when a small custom element needs local state, scoped rendering, and direct event handling without a larger app framework.&lt;/p&gt;
+
+        &lt;h3 id=&quot;install-the-web-runtime&quot;&gt;Install the web runtime&lt;/h3&gt;
+        &lt;p&gt;Install the package in the app that owns the custom elements.&lt;/p&gt;
+        &lt;pre&gt;&lt;code&gt;npm i @ga-ut/ce&lt;/code&gt;&lt;/pre&gt;
+        &lt;p&gt;Browser-facing components import named helpers from the web entrypoint. The package root stays core-only.&lt;/p&gt;
+        &lt;pre&gt;&lt;code&gt;import { config, define, html, signal, derived, match } from &quot;@ga-ut/ce/web&quot;;&lt;/code&gt;&lt;/pre&gt;
+
+        &lt;h3 id=&quot;define-a-component&quot;&gt;Define a component&lt;/h3&gt;
+        &lt;p&gt;The component function owns setup and render. A function named &lt;code&gt;ProductBadge&lt;/code&gt; registers the &lt;code&gt;product-badge&lt;/code&gt; custom element.&lt;/p&gt;
+        &lt;pre&gt;&lt;code&gt;define(function ProductBadge({ props }) {
+  const selected = signal(false);
+  const label = derived(() =&amp;gt; selected() ? &quot;Selected&quot; : props.label);
+
+  return html`
+    &amp;lt;button onclick=${() =&amp;gt; selected.update((value) =&amp;gt; !value)}&amp;gt;
+      ${label}
+    &amp;lt;/button&amp;gt;
+  `;
+}, {
+  props: {
+    label: String
+  }
+});&lt;/code&gt;&lt;/pre&gt;
+
+        &lt;h3 id=&quot;render-it-in-html&quot;&gt;Render it in HTML&lt;/h3&gt;
+        &lt;p&gt;Once defined, the element is used like any other custom element. Props are read from attributes and converted by the declared prop type.&lt;/p&gt;
+        &lt;pre&gt;&lt;code&gt;&amp;lt;product-badge label=&quot;In stock&quot;&amp;gt;&amp;lt;/product-badge&amp;gt;&lt;/code&gt;&lt;/pre&gt;
+
+        &lt;h3 id=&quot;configure-an-app-entry&quot;&gt;Configure an app entry&lt;/h3&gt;
+        &lt;p&gt;Use &lt;code&gt;config()&lt;/code&gt; once at the browser entry to install shared styles, declare the root element, and register route tags. Route entries use the tag returned from &lt;code&gt;define()&lt;/code&gt;, not the component function itself.&lt;/p&gt;
+        &lt;pre&gt;&lt;code&gt;import styles from &quot;./ce.css?inline&quot;;
+
+const homeTag = define(function HomePage() {
+  return html`&amp;lt;main class=&quot;p-4&quot;&amp;gt;Home&amp;lt;/main&amp;gt;`;
+});
+
+config({
+  globalStyles: [styles],
+  entryPoint: &quot;ce-app&quot;,
+  routes: [{ path: &quot;/&quot;, tag: homeTag }]
+});&lt;/code&gt;&lt;/pre&gt;
+        &lt;p&gt;CSS generation stays with your toolchain. Tailwind CSS, PostCSS, UnoCSS, Vite inline CSS, plain CSS, or a constructed &lt;code&gt;CSSStyleSheet&lt;/code&gt; can feed compiled CSS into &lt;code&gt;globalStyles&lt;/code&gt;. CE shares that stylesheet across component shadow roots through &lt;code&gt;adoptedStyleSheets&lt;/code&gt; when available, with a scoped &lt;code&gt;&amp;lt;style&amp;gt;&lt;/code&gt; fallback.&lt;/p&gt;
+
+        &lt;h3 id=&quot;generated-static-snapshot&quot;&gt;Generated static snapshot&lt;/h3&gt;
+        &lt;p&gt;The docs build runs the component once at build time and emits Declarative Shadow DOM without a headless browser.&lt;/p&gt;
+        &lt;product-badge label=&quot;In stock&quot;&gt;&lt;template shadowrootmode=&quot;open&quot;&gt;
+        &lt;style&gt;
+          button {
+            border: 1px solid #2563eb;
+            border-radius: 8px;
+            background: #fff;
+            color: #1d4ed8;
+            font: inherit;
+            font-weight: 700;
+            padding: 0.55rem 0.75rem;
+          }
+        &lt;/style&gt;
+        &lt;button&gt;
+          In stock
+        &lt;/button&gt;
+      &lt;/template&gt;&lt;/product-badge&gt;
+
+        &lt;h3 id=&quot;handle-async-states-explicitly&quot;&gt;Handle async states explicitly&lt;/h3&gt;
+        &lt;p&gt;Keep loading, success, and failure visible in render code. This makes state transitions easier to review and test.&lt;/p&gt;
+        &lt;pre&gt;&lt;code&gt;const result = signal({ phase: &quot;loading&quot;, data: null, error: null });
+
+return html`
+  ${match(result())
+    .when((state) =&amp;gt; state.phase === &quot;loading&quot;, () =&amp;gt; html`&amp;lt;p&amp;gt;Loading&amp;lt;/p&amp;gt;`)
+    .when((state) =&amp;gt; state.phase === &quot;success&quot;, ({ data }) =&amp;gt; html`&amp;lt;p&amp;gt;${data.title}&amp;lt;/p&amp;gt;`)
+    .otherwise(({ error }) =&amp;gt; html`&amp;lt;p&amp;gt;${error?.message ?? &quot;Failed&quot;}&amp;lt;/p&amp;gt;`)}
+`;&lt;/code&gt;&lt;/pre&gt;
+      &lt;/article&gt;
+" toc="&lt;nav class=&quot;generated-toc&quot; aria-label=&quot;On this page&quot;&gt;
+              &lt;h2&gt;On this page&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;#usage&quot; data-depth=&quot;2&quot;&gt;Usage&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#install-the-web-runtime&quot; data-depth=&quot;3&quot;&gt;Install the web runtime&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#define-a-component&quot; data-depth=&quot;3&quot;&gt;Define a component&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#render-it-in-html&quot; data-depth=&quot;3&quot;&gt;Render it in HTML&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#configure-an-app-entry&quot; data-depth=&quot;3&quot;&gt;Configure an app entry&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#generated-static-snapshot&quot; data-depth=&quot;3&quot;&gt;Generated static snapshot&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#handle-async-states-explicitly&quot; data-depth=&quot;3&quot;&gt;Handle async states explicitly&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/nav&gt;">
     <div class="site-page">
       <header class="site-header">
         <div class="site-header__inner">
@@ -56,8 +170,10 @@
         <p>Use CE when a small custom element needs local state, scoped rendering, and direct event handling without a larger app framework.</p>
 
         <h3 id="install-the-web-runtime">Install the web runtime</h3>
+        <p>Install the package in the app that owns the custom elements.</p>
+        <pre><code>npm i @ga-ut/ce</code></pre>
         <p>Browser-facing components import named helpers from the web entrypoint. The package root stays core-only.</p>
-        <pre><code>import { define, html, signal, derived, match } from "@ga-ut/ce/web";</code></pre>
+        <pre><code>import { config, define, html, signal, derived, match } from "@ga-ut/ce/web";</code></pre>
 
         <h3 id="define-a-component">Define a component</h3>
         <p>The component function owns setup and render. A function named <code>ProductBadge</code> registers the <code>product-badge</code> custom element.</p>
@@ -79,6 +195,21 @@
         <h3 id="render-it-in-html">Render it in HTML</h3>
         <p>Once defined, the element is used like any other custom element. Props are read from attributes and converted by the declared prop type.</p>
         <pre><code>&lt;product-badge label="In stock"&gt;&lt;/product-badge&gt;</code></pre>
+
+        <h3 id="configure-an-app-entry">Configure an app entry</h3>
+        <p>Use <code>config()</code> once at the browser entry to install shared styles, declare the root element, and register route tags. Route entries use the tag returned from <code>define()</code>, not the component function itself.</p>
+        <pre><code>import styles from "./ce.css?inline";
+
+const homeTag = define(function HomePage() {
+  return html`&lt;main class="p-4"&gt;Home&lt;/main&gt;`;
+});
+
+config({
+  globalStyles: [styles],
+  entryPoint: "ce-app",
+  routes: [{ path: "/", tag: homeTag }]
+});</code></pre>
+        <p>CSS generation stays with your toolchain. Tailwind CSS, PostCSS, UnoCSS, Vite inline CSS, plain CSS, or a constructed <code>CSSStyleSheet</code> can feed compiled CSS into <code>globalStyles</code>. CE shares that stylesheet across component shadow roots through <code>adoptedStyleSheets</code> when available, with a scoped <code>&lt;style&gt;</code> fallback.</p>
 
         <h3 id="generated-static-snapshot">Generated static snapshot</h3>
         <p>The docs build runs the component once at build time and emits Declarative Shadow DOM without a headless browser.</p>
@@ -124,6 +255,7 @@ return html`
                 <li><a href="#install-the-web-runtime" data-depth="3">Install the web runtime</a></li>
                 <li><a href="#define-a-component" data-depth="3">Define a component</a></li>
                 <li><a href="#render-it-in-html" data-depth="3">Render it in HTML</a></li>
+                <li><a href="#configure-an-app-entry" data-depth="3">Configure an app entry</a></li>
                 <li><a href="#generated-static-snapshot" data-depth="3">Generated static snapshot</a></li>
                 <li><a href="#handle-async-states-explicitly" data-depth="3">Handle async states explicitly</a></li>
               </ul>

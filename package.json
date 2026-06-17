@@ -14,7 +14,7 @@
     "preview:playground": "bun run --filter @ga-ut/ce-playground preview",
     "pack:check": "bun run --filter @ga-ut/ce pack:check",
     "test:events": "node --test tests/*.test.mjs",
-    "docs:build": "npm run build && node dist/cli/index.mjs build --entry docs/site/pages.mjs --out docs/site",
+    "docs:build": "npm run build && node docs/site/build.mjs",
     "docs:validate": "node scripts/validate-docs.mjs",
     "verify": "npm run lint && npm test && npm run build",
     "verify:full": "npm run verify && npm run test:events && npm run docs:validate && npm run pack:check"

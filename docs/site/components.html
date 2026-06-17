@@ -7,7 +7,74 @@
     <link rel="stylesheet" href="assets/styles.css?v=20260607-static-docs" />
   </head>
   <body>
-<docs-page>
+<docs-page top-nav="&lt;a href=&quot;index.html&quot;&gt;Overview&lt;/a&gt;
+              &lt;a href=&quot;usage.html&quot;&gt;Usage&lt;/a&gt;
+              &lt;a href=&quot;api.html&quot;&gt;API&lt;/a&gt;
+              &lt;a href=&quot;components.html&quot; aria-current=&quot;page&quot;&gt;Components&lt;/a&gt;
+              &lt;a href=&quot;roadmap.html&quot;&gt;Roadmap&lt;/a&gt;
+              &lt;a href=&quot;release.html&quot;&gt;Release&lt;/a&gt;
+              &lt;a href=&quot;playground.html&quot;&gt;Playground&lt;/a&gt;" side-nav="&lt;section class=&quot;docs-nav-group&quot;&gt;
+              &lt;h2&gt;Start&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;index.html&quot;&gt;Overview&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;usage.html&quot;&gt;Usage guide&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;playground.html&quot;&gt;Playground&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/section&gt;
+            &lt;section class=&quot;docs-nav-group&quot;&gt;
+              &lt;h2&gt;Reference&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;api.html&quot;&gt;Public API&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;components.html&quot; aria-current=&quot;page&quot;&gt;Component model&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;roadmap.html&quot;&gt;Roadmap&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/section&gt;
+            &lt;section class=&quot;docs-nav-group&quot;&gt;
+              &lt;h2&gt;Project&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;release.html&quot;&gt;Release process&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/section&gt;" content="      &lt;article class=&quot;doc-page&quot;&gt;
+        &lt;h2 id=&quot;components&quot;&gt;Components&lt;/h2&gt;
+        &lt;p&gt;CE components are custom elements with a compact setup surface. They keep rendering, state, props, lifecycle cleanup, and handlers together.&lt;/p&gt;
+
+        &lt;h3 id=&quot;naming&quot;&gt;Naming&lt;/h3&gt;
+        &lt;p&gt;The function name is converted to a custom element tag. This keeps the registration point short and avoids duplicating the tag string.&lt;/p&gt;
+        &lt;pre&gt;&lt;code&gt;define(function UserMenu() {
+  return html`&amp;lt;button&amp;gt;Account&amp;lt;/button&amp;gt;`;
+});
+
+// Registers &amp;lt;user-menu&amp;gt;&lt;/code&gt;&lt;/pre&gt;
+
+        &lt;h3 id=&quot;props&quot;&gt;Props&lt;/h3&gt;
+        &lt;p&gt;Props are declared beside the component and parsed from attributes. Use them for initial values and external configuration.&lt;/p&gt;
+        &lt;pre&gt;&lt;code&gt;define(function PriceLabel({ props }) {
+  return html`&amp;lt;span&amp;gt;${props.currency} ${props.amount}&amp;lt;/span&amp;gt;`;
+}, {
+  props: {
+    currency: String,
+    amount: Number
+  }
+});&lt;/code&gt;&lt;/pre&gt;
+
+        &lt;h3 id=&quot;state&quot;&gt;State&lt;/h3&gt;
+        &lt;p&gt;Signals are for local mutable values. Derived signals compute from other signals and update their rendered positions without rerunning unrelated DOM.&lt;/p&gt;
+        &lt;pre&gt;&lt;code&gt;const count = signal(1);
+const doubled = derived(() =&amp;gt; count() * 2);&lt;/code&gt;&lt;/pre&gt;
+
+        &lt;h3 id=&quot;cleanup&quot;&gt;Cleanup&lt;/h3&gt;
+        &lt;p&gt;Use lifecycle cleanup for timers, observers, subscriptions, and request cancellation. Cleanup runs when the element disconnects.&lt;/p&gt;
+      &lt;/article&gt;
+" toc="&lt;nav class=&quot;generated-toc&quot; aria-label=&quot;On this page&quot;&gt;
+              &lt;h2&gt;On this page&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;#components&quot; data-depth=&quot;2&quot;&gt;Components&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#naming&quot; data-depth=&quot;3&quot;&gt;Naming&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#props&quot; data-depth=&quot;3&quot;&gt;Props&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#state&quot; data-depth=&quot;3&quot;&gt;State&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#cleanup&quot; data-depth=&quot;3&quot;&gt;Cleanup&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/nav&gt;">
     <div class="site-page">
       <header class="site-header">
         <div class="site-header__inner">

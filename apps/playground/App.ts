@@ -1,20 +1,4 @@
-import { define, html, navigate, setEntryPoint, signal } from "../../packages/ce/src/web";
-
-define(function CounterButtonGroup({ host }) {
-  const dispatch = (type: string) => {
-    host.dispatchEvent(
-      new CustomEvent(type, {
-        bubbles: true,
-        composed: true,
-      })
-    );
-  };
-
-  return html`<div>
-    <button onclick=${() => dispatch("increment")}>+</button>
-    <button onclick=${() => dispatch("decrement")}>-</button>
-  </div>`;
-});
+import { config, define, html, navigate, signal } from "../../packages/ce/src/web";
 
 define(function UserInfo() {
   const users = ["test1", "test2", "test3"];
@@ -24,35 +8,32 @@ define(function UserInfo() {
   </div>`;
 });
 
-define(
-  function MainApp() {
-    const count = signal(0);
+function MainApp() {
+  const count = signal(0);
 
-    return html`
-      <nav>
-        <button onclick=${() => navigate("#/users")}>View users</button>
-      </nav>
-      <div>Count: ${count} times</div>
-      <counter-button-group
-        onincrement=${() => count.update((value) => value + 1)}
-        ondecrement=${() => count.update((value) => value - 1)}
-      ></counter-button-group>
-    `;
-  },
-  { route: "/" }
-);
+  return html`
+    <nav>
+      <button onclick=${() => navigate("#/users")}>View users</button>
+    </nav>
+    <div>Count: ${count} times</div>
+    <div>
+      <button onclick=${() => count.update((value) => value + 1)}>+</button>
+      <button onclick=${() => count.update((value) => value - 1)}>-</button>
+    </div>
+  `;
+}
 
-define(
-  function UsersPage() {
-    return html`
-      <nav>
-        <button onclick=${() => navigate("#/")}>Back to home</button>
-      </nav>
-      <user-info></user-info>
-    `;
-  },
-  { route: "/users" }
-);
+function UsersPage() {
+  return html`
+    <nav>
+      <button onclick=${() => navigate("#/")}>Back to home</button>
+    </nav>
+    <user-info></user-info>
+  `;
+}
+
+const mainAppTag = define(MainApp);
+const usersPageTag = define(UsersPage);
 
 const mountApp = () => {
   const existingRoot = document.querySelector<HTMLElement>("[data-ce-playground-root]");
@@ -68,9 +49,22 @@ const mountApp = () => {
     window.location.hash = "#/";
   }
 
-  setEntryPoint("ce-playground-root", {
-    rootElement: root,
-    hydrate: false,
+  config({
+    entryPoint: {
+      selector: "ce-playground-root",
+      rootElement: root,
+      hydrate: false,
+    },
+    routes: [
+      {
+        path: "/",
+        tag: mainAppTag,
+      },
+      {
+        path: "/users",
+        tag: usersPageTag,
+      },
+    ],
   });
 };
 

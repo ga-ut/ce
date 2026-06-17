@@ -1,29 +1,18 @@
 #!/usr/bin/env node
 // @ts-nocheck
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
-import { renderStatic } from "../web/ce";
-
-type StaticPage = {
-  path: string;
-  component: Function;
-  props?: Record<string, unknown>;
-  attributes?: false | Record<string, unknown>;
-  title?: string;
-  lang?: string;
-  head?: string;
-  mode?: "declarative-shadow-dom" | "light-dom";
-};
 
 const usage = `Usage:
-  ce-cli build --entry <file> --out <dir>
+  ce-cli build --entry <file> --out <dir> [--css <file>] [--root <tag>] [--title <title>]
+  ce-cli bundle --entry <file> --out <file> [--css <file>]
 
-Entry module:
-  export const pages = [
-    { path: "index.html", title: "Home", component: HomePage, props: {} }
-  ];
+Bundle entry:
+  import { config } from "@ga-ut/ce/web";
+  import styles from "ce:styles";
 `;
+
+const cliDir = path.dirname(path.resolve(process.argv[1] ?? "."));
 
 function parseArgs(argv: string[]) {
   const command = argv[2];
@@ -51,75 +40,208 @@ function escapeHtml(value: unknown) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
-function renderDocument(page: StaticPage, body: string) {
-  const lang = page.lang ?? "en";
-  const title = page.title ? escapeHtml(page.title) : "";
+function assertCustomElementTag(value: string) {
+  if (!/^[a-z][a-z0-9._-]*-[a-z0-9._-]*$/.test(value)) {
+    throw new Error(`Root element must be a valid custom element tag name: ${value}`);
+  }
+}
 
+function renderAppShell(rootTag: string, title: string) {
   return `<!doctype html>
-<html lang="${lang}">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    ${title ? `<title>${title}</title>` : ""}
-${page.head ?? ""}  </head>
+    <title>${escapeHtml(title)}</title>
+  </head>
   <body>
-${body}
+    <${rootTag}></${rootTag}>
+    <script type="module" src="./app.js"></script>
   </body>
 </html>
 `;
 }
 
-async function loadPages(entry: string) {
-  const entryUrl = pathToFileURL(path.resolve(entry)).href;
-  const module = await import(entryUrl);
-  const pages = module.pages ?? module.default;
-
-  if (!Array.isArray(pages)) {
-    throw new Error("Entry module must export a pages array.");
-  }
-
-  return pages as StaticPage[];
-}
-
 async function build() {
   const { command, options } = parseArgs(process.argv);
 
-  if (command !== "build" || options.help) {
+  if (!command || options.help) {
     console.log(usage);
-    process.exit(command === "build" ? 0 : 1);
+    process.exit(command ? 0 : 1);
+  }
+
+  if (command === "bundle") {
+    await bundle(options);
+    return;
+  }
+
+  if (command !== "build") {
+    console.error(usage);
+    process.exit(1);
   }
 
   const entry = options.entry;
   const outDir = options.out;
+  const cssFile = options.css;
+  const rootTag = typeof options.root === "string" ? options.root : "ce-app";
+  const title = typeof options.title === "string" ? options.title : "CE App";
 
   if (typeof entry !== "string" || typeof outDir !== "string") {
     console.error(usage);
     process.exit(1);
   }
 
-  const pages = await loadPages(entry);
+  assertCustomElementTag(rootTag);
 
-  for (const page of pages) {
-    if (!page.path || typeof page.component !== "function") {
-      throw new Error("Each page must include path and component.");
-    }
+  const cssText = typeof cssFile === "string" ? await readFile(path.resolve(cssFile), "utf8") : "";
+  const resolvedOutDir = path.resolve(outDir);
+  const bundleOutput = await createBundle(path.resolve(entry), cssText);
 
-    const snapshot = await renderStatic(page.component as any, {
-      props: page.props,
-      attributes: page.attributes ?? (page.mode === "light-dom" ? false : undefined),
-      mode: page.mode,
-    });
-    const html = renderDocument(page, snapshot);
-    const outputPath = path.join(path.resolve(outDir), page.path);
+  await mkdir(resolvedOutDir, { recursive: true });
+  await writeFile(path.join(resolvedOutDir, "app.js"), bundleOutput);
+  await writeFile(path.join(resolvedOutDir, "index.html"), renderAppShell(rootTag, title));
 
-    await mkdir(path.dirname(outputPath), { recursive: true });
-    await writeFile(outputPath, html);
+  console.log(`Built CE app in ${path.relative(process.cwd(), resolvedOutDir) || "."}.`);
+}
+
+function isRelativeSpecifier(specifier: string) {
+  return specifier.startsWith("./") || specifier.startsWith("../");
+}
+
+async function fileExists(filePath: string) {
+  try {
+    await readFile(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function resolveModule(specifier: string, importer: string) {
+  if (specifier === "@ga-ut/ce/web") {
+    const bundledWebEntry = path.resolve(cliDir, "../web/index.mjs");
+    if (await fileExists(bundledWebEntry)) return bundledWebEntry;
+    return path.resolve(cliDir, "../web/index.ts");
   }
 
-  console.log(`Generated ${pages.length} page(s) in ${outDir}.`);
+  if (!isRelativeSpecifier(specifier)) {
+    throw new Error(
+      `ce-cli bundle only supports relative imports, "ce:styles", and "@ga-ut/ce/web": ${specifier}`
+    );
+  }
+
+  const basePath = path.resolve(path.dirname(importer), specifier);
+  const candidates = path.extname(basePath)
+    ? [basePath]
+    : [
+        `${basePath}.js`,
+        `${basePath}.mjs`,
+        `${basePath}.ts`,
+        path.join(basePath, "index.js"),
+        path.join(basePath, "index.mjs"),
+        path.join(basePath, "index.ts"),
+      ];
+
+  for (const candidate of candidates) {
+    if (await fileExists(candidate)) return candidate;
+  }
+
+  throw new Error(`Unable to resolve import "${specifier}" from ${importer}`);
+}
+
+function getDefaultImportName(clause: string | undefined) {
+  const trimmed = clause?.trim();
+  if (!trimmed || trimmed.startsWith("{") || trimmed.startsWith("*")) return null;
+  return trimmed.split(",")[0]?.trim() || null;
+}
+
+function stripExports(source: string, modulePath: string) {
+  if (/\bexport\s+default\b/.test(source)) {
+    throw new Error(`ce-cli bundle does not support default exports yet: ${modulePath}`);
+  }
+
+  return source
+    .replace(/(^|\n)\s*export\s+(?=(const|let|var|function|class)\s)/g, "$1")
+    .replace(/(^|\n)\s*export\s*\{[\s\S]*?\};?/g, "$1");
+}
+
+function assertSupportedSyntax(source: string, modulePath: string) {
+  if (/\bimport\s*\(/.test(source)) {
+    throw new Error(`ce-cli bundle does not support dynamic import(): ${modulePath}`);
+  }
+}
+
+async function createBundle(entryPath: string, cssText: string) {
+  const seen = new Set<string>();
+  const chunks: string[] = [];
+  const importPattern = /(^|\n)\s*import\s+(?:(.*?)\s+from\s+)?["']([^"']+)["'];?/gs;
+
+  const processModule = async (modulePath: string) => {
+    const resolvedPath = path.resolve(modulePath);
+    if (seen.has(resolvedPath)) return;
+    seen.add(resolvedPath);
+
+    const originalSource = await readFile(resolvedPath, "utf8");
+    assertSupportedSyntax(originalSource, resolvedPath);
+
+    const imports = Array.from(originalSource.matchAll(importPattern));
+
+    for (const match of imports) {
+      const specifier = match[3];
+      if (specifier === "ce:styles") continue;
+      const dependencyPath = await resolveModule(specifier, resolvedPath);
+      await processModule(dependencyPath);
+    }
+
+    const transformed = stripExports(
+      originalSource.replace(importPattern, (statement, prefix, clause, specifier) => {
+        if (specifier === "ce:styles") {
+          const bindingName = getDefaultImportName(clause);
+          if (!bindingName) {
+            throw new Error(
+              `Import "ce:styles" with a default binding, for example: import styles from "ce:styles";`
+            );
+          }
+          return `${prefix}const ${bindingName} = ${JSON.stringify(cssText)};`;
+        }
+
+        return prefix;
+      }),
+      resolvedPath
+    ).trim();
+
+    if (transformed) {
+      chunks.push(`// ${path.relative(process.cwd(), resolvedPath)}\n${transformed}`);
+    }
+  };
+
+  await processModule(entryPath);
+
+  return `${chunks.join("\n\n")}\n`;
+}
+
+async function bundle(options: Record<string, string | boolean>) {
+  const entry = options.entry;
+  const outFile = options.out;
+  const cssFile = options.css;
+
+  if (typeof entry !== "string" || typeof outFile !== "string") {
+    console.error(usage);
+    process.exit(1);
+  }
+
+  const cssText = typeof cssFile === "string" ? await readFile(path.resolve(cssFile), "utf8") : "";
+  const output = await createBundle(path.resolve(entry), cssText);
+  const outputPath = path.resolve(outFile);
+
+  await mkdir(path.dirname(outputPath), { recursive: true });
+  await writeFile(outputPath, output);
+
+  console.log(`Bundled ${path.relative(process.cwd(), outputPath)}.`);
 }
 
 build().catch((error) => {

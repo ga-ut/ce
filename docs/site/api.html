@@ -7,7 +7,250 @@
     <link rel="stylesheet" href="assets/styles.css?v=20260607-static-docs" />
   </head>
   <body>
-<docs-page>
+<docs-page top-nav="&lt;a href=&quot;index.html&quot;&gt;Overview&lt;/a&gt;
+              &lt;a href=&quot;usage.html&quot;&gt;Usage&lt;/a&gt;
+              &lt;a href=&quot;api.html&quot; aria-current=&quot;page&quot;&gt;API&lt;/a&gt;
+              &lt;a href=&quot;components.html&quot;&gt;Components&lt;/a&gt;
+              &lt;a href=&quot;roadmap.html&quot;&gt;Roadmap&lt;/a&gt;
+              &lt;a href=&quot;release.html&quot;&gt;Release&lt;/a&gt;
+              &lt;a href=&quot;playground.html&quot;&gt;Playground&lt;/a&gt;" side-nav="&lt;section class=&quot;docs-nav-group&quot;&gt;
+              &lt;h2&gt;Start&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;index.html&quot;&gt;Overview&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;usage.html&quot;&gt;Usage guide&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;playground.html&quot;&gt;Playground&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/section&gt;
+            &lt;section class=&quot;docs-nav-group&quot;&gt;
+              &lt;h2&gt;Reference&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;api.html&quot; aria-current=&quot;page&quot;&gt;Public API&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;components.html&quot;&gt;Component model&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;roadmap.html&quot;&gt;Roadmap&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/section&gt;
+            &lt;section class=&quot;docs-nav-group&quot;&gt;
+              &lt;h2&gt;Project&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;release.html&quot;&gt;Release process&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/section&gt;" content="      &lt;article class=&quot;doc-page&quot;&gt;
+        &lt;h2 id=&quot;ce-public-api&quot;&gt;CE Public API&lt;/h2&gt;
+        &lt;p&gt;The web entrypoint is the public runtime surface for custom elements, signals, templates, routing, and static rendering helpers.&lt;/p&gt;
+
+        &lt;h3 id=&quot;import-paths&quot;&gt;Import paths&lt;/h3&gt;
+        &lt;pre&gt;&lt;code&gt;import {
+  config,
+  define,
+  derived,
+  effect,
+  html,
+  match,
+  navigate,
+  renderStatic,
+  signal,
+} from &quot;@ga-ut/ce/web&quot;;
+
+import * as core from &quot;@ga-ut/ce&quot;;
+import * as coreOnly from &quot;@ga-ut/ce/core&quot;;&lt;/code&gt;&lt;/pre&gt;
+
+        &lt;h3 id=&quot;component-api&quot;&gt;Component API&lt;/h3&gt;
+        &lt;h4&gt;define(component, options?)&lt;/h4&gt;
+        &lt;pre&gt;&lt;code&gt;define(function MyCounter({ props, lifecycle }) {
+  const count = signal(props.initial ?? 0);
+  const doubled = derived(() =&amp;gt; count() * 2);
+
+  lifecycle.cleanup(() =&amp;gt; {
+    // clear timers, listeners, or requests here
+  });
+
+  return html`
+    &amp;lt;button onclick=${() =&amp;gt; count.update((value) =&amp;gt; value + 1)}&amp;gt;
+      ${count} / ${doubled}
+    &amp;lt;/button&amp;gt;
+  `;
+}, {
+  props: {
+    initial: Number
+  }
+});&lt;/code&gt;&lt;/pre&gt;
+        &lt;ul&gt;
+          &lt;li&gt;The function name becomes the custom element tag name: &lt;code&gt;MyCounter&lt;/code&gt; registers &lt;code&gt;my-counter&lt;/code&gt;.&lt;/li&gt;
+          &lt;li&gt;&lt;code&gt;props&lt;/code&gt; are parsed from attributes and tracked reactively.&lt;/li&gt;
+          &lt;li&gt;&lt;code&gt;lifecycle.connected&lt;/code&gt;, &lt;code&gt;lifecycle.cleanup&lt;/code&gt;, and &lt;code&gt;lifecycle.adopted&lt;/code&gt; register instance lifecycle callbacks.&lt;/li&gt;
+          &lt;li&gt;Inline event handlers use DOM event names, such as &lt;code&gt;onclick=${handler}&lt;/code&gt;.&lt;/li&gt;
+        &lt;/ul&gt;
+
+        &lt;h4&gt;signal(value)&lt;/h4&gt;
+        &lt;pre&gt;&lt;code&gt;const count = signal(0);
+
+count();
+count.value;
+count.set(1);
+count.update((value) =&amp;gt; value + 1);
+const unsubscribe = count.subscribe((value) =&amp;gt; console.log(value));&lt;/code&gt;&lt;/pre&gt;
+
+        &lt;h4&gt;derived(compute)&lt;/h4&gt;
+        &lt;pre&gt;&lt;code&gt;const doubled = derived(() =&amp;gt; count() * 2);&lt;/code&gt;&lt;/pre&gt;
+        &lt;p&gt;Derived signals recompute when the signals read by &lt;code&gt;compute&lt;/code&gt; change.&lt;/p&gt;
+
+        &lt;h4&gt;effect(callback)&lt;/h4&gt;
+        &lt;pre&gt;&lt;code&gt;effect(() =&amp;gt; {
+  document.title = `Count ${count()}`;
+
+  return () =&amp;gt; {
+    document.title = &quot;&quot;;
+  };
+});&lt;/code&gt;&lt;/pre&gt;
+        &lt;p&gt;Effects rerun when their read signals change. Cleanup functions run before the next effect pass and on component disconnect when the effect is created inside a component lifecycle scope.&lt;/p&gt;
+
+        &lt;h4&gt;html(strings, ...values)&lt;/h4&gt;
+        &lt;pre&gt;&lt;code&gt;html`
+  &amp;lt;p&amp;gt;${count}&amp;lt;/p&amp;gt;
+  &amp;lt;button onclick=${handler} aria-current=&quot;${isCurrent}&quot;&amp;gt;Save&amp;lt;/button&amp;gt;
+`&lt;/code&gt;&lt;/pre&gt;
+        &lt;p&gt;Signals patch text and attribute positions directly. Non-signal render callback values participate in structural rerenders.&lt;/p&gt;
+
+        &lt;h3 id=&quot;runtime-config&quot;&gt;Runtime Config&lt;/h3&gt;
+        &lt;h4&gt;config(options?)&lt;/h4&gt;
+        &lt;p&gt;Configures runtime-wide behavior for CE web components. Global styles are shared across shadow roots through &lt;code&gt;adoptedStyleSheets&lt;/code&gt; when the browser supports it, with a scoped &lt;code&gt;&amp;lt;style&amp;gt;&lt;/code&gt; fallback for environments that do not.&lt;/p&gt;
+        &lt;pre&gt;&lt;code&gt;import { config, define, html } from &quot;@ga-ut/ce/web&quot;;
+import styles from &quot;./ce.css?inline&quot;;
+
+const homePage = define(function HomePage() {
+  return html`&amp;lt;main class=&quot;grid gap-4 p-4&quot;&amp;gt;Home&amp;lt;/main&amp;gt;`;
+});
+
+config({
+  globalStyles: [styles],
+  entryPoint: {
+    selector: &quot;ce-app&quot;,
+    rootElement: document.querySelector(&quot;#app&quot;),
+    hydrate: false
+  },
+  routes: [
+    {
+      path: &quot;/&quot;,
+      tag: homePage
+    }
+  ]
+});&lt;/code&gt;&lt;/pre&gt;
+        &lt;p&gt;&lt;code&gt;globalStyles&lt;/code&gt; accepts compiled CSS strings or &lt;code&gt;CSSStyleSheet&lt;/code&gt; instances. CSS generation stays with the app toolchain, such as Vite, PostCSS, Tailwind CSS, UnoCSS, or plain CSS. CE only adopts the resulting stylesheet inside component shadow roots.&lt;/p&gt;
+
+        &lt;h3 id=&quot;router-api&quot;&gt;Router API&lt;/h3&gt;
+
+        &lt;h4&gt;navigate(path)&lt;/h4&gt;
+        &lt;p&gt;Supports history paths such as &lt;code&gt;/users&lt;/code&gt; and hash paths such as &lt;code&gt;#/users&lt;/code&gt;, then renders the route registered through &lt;code&gt;config({ routes })&lt;/code&gt;.&lt;/p&gt;
+        &lt;pre&gt;&lt;code&gt;const usersPage = define(function UsersPage() {
+  return html`&amp;lt;h1&amp;gt;Users&amp;lt;/h1&amp;gt;`;
+});
+
+config({
+  entryPoint: &quot;ce-entry&quot;,
+  routes: [
+    {
+      path: &quot;/users&quot;,
+      tag: usersPage
+    }
+  ]
+});
+
+await navigate(&quot;/users&quot;);&lt;/code&gt;&lt;/pre&gt;
+
+        &lt;h3 id=&quot;static-snapshot-api&quot;&gt;Static Snapshot API&lt;/h3&gt;
+        &lt;h4&gt;renderStatic(component, options?)&lt;/h4&gt;
+        &lt;pre&gt;&lt;code&gt;const markup = await renderStatic&amp;lt;{ initial: NumberConstructor }&amp;gt;(
+  function StaticCounter({ props }) {
+    const count = signal(props.initial ?? 0);
+    const doubled = derived(() =&amp;gt; count() * 2);
+
+    return html`
+      &amp;lt;button onclick=${() =&amp;gt; count.update((value) =&amp;gt; value + 1)}&amp;gt;
+        ${count} / ${doubled}
+      &amp;lt;/button&amp;gt;
+    `;
+  },
+  {
+    props: {
+      initial: 2
+    }
+  }
+);&lt;/code&gt;&lt;/pre&gt;
+        &lt;p&gt;The default output is Declarative Shadow DOM:&lt;/p&gt;
+        &lt;pre&gt;&lt;code&gt;&amp;lt;static-counter initial=&quot;2&quot;&amp;gt;
+  &amp;lt;template shadowrootmode=&quot;open&quot;&amp;gt;
+    &amp;lt;button&amp;gt;2 / 4&amp;lt;/button&amp;gt;
+  &amp;lt;/template&amp;gt;
+&amp;lt;/static-counter&amp;gt;&lt;/code&gt;&lt;/pre&gt;
+        &lt;ul&gt;
+          &lt;li&gt;The component function is called once.&lt;/li&gt;
+          &lt;li&gt;&lt;code&gt;signal&lt;/code&gt; and &lt;code&gt;derived&lt;/code&gt; resolve to their current values.&lt;/li&gt;
+          &lt;li&gt;Event handlers such as &lt;code&gt;onclick=${handler}&lt;/code&gt; are removed from the static HTML.&lt;/li&gt;
+          &lt;li&gt;&lt;code&gt;effect&lt;/code&gt; is skipped to avoid build-time side effects.&lt;/li&gt;
+          &lt;li&gt;No DOM, &lt;code&gt;customElements&lt;/code&gt;, &lt;code&gt;HTMLElement&lt;/code&gt;, or headless browser is required.&lt;/li&gt;
+        &lt;/ul&gt;
+        &lt;p&gt;Use &lt;code&gt;mode: &quot;light-dom&quot;&lt;/code&gt; when the static output should be emitted as normal children instead of Declarative Shadow DOM.&lt;/p&gt;
+
+        &lt;h3 id=&quot;app-build-cli&quot;&gt;App Build CLI&lt;/h3&gt;
+        &lt;p&gt;Create a browser entry that configures the CE app:&lt;/p&gt;
+        &lt;pre&gt;&lt;code&gt;import { config, define, html } from &quot;@ga-ut/ce/web&quot;;
+import styles from &quot;ce:styles&quot;;
+
+const homePageTag = define(function HomePage() {
+  return html`&amp;lt;main class=&quot;p-4&quot;&amp;gt;&amp;lt;h1&amp;gt;CE App&amp;lt;/h1&amp;gt;&amp;lt;/main&amp;gt;`;
+});
+
+config({
+  globalStyles: [styles],
+  entryPoint: &quot;ce-app&quot;,
+  routes: [{ path: &quot;/&quot;, tag: homePageTag }]
+});&lt;/code&gt;&lt;/pre&gt;
+        &lt;p&gt;Then generate an app shell and bundled browser module locally or in CI:&lt;/p&gt;
+        &lt;pre&gt;&lt;code&gt;npx --package @ga-ut/ce ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css&lt;/code&gt;&lt;/pre&gt;
+        &lt;p&gt;The command writes &lt;code&gt;dist/index.html&lt;/code&gt; and &lt;code&gt;dist/app.js&lt;/code&gt;. Use &lt;code&gt;--root&lt;/code&gt; to choose the generated root custom element tag and &lt;code&gt;--title&lt;/code&gt; to set the document title.&lt;/p&gt;
+        &lt;pre&gt;&lt;code&gt;npx --package @ga-ut/ce ce-cli build \
+  --entry ./src/main.js \
+  --out ./dist \
+  --css ./src/ce.css \
+  --root ce-app \
+  --title &quot;CE App&quot;&lt;/code&gt;&lt;/pre&gt;
+
+        &lt;h3 id=&quot;browser-bundle-cli&quot;&gt;Browser Bundle CLI&lt;/h3&gt;
+        &lt;p&gt;Use &lt;code&gt;bundle&lt;/code&gt; when you only want one browser ESM file without the generated HTML shell:&lt;/p&gt;
+        &lt;pre&gt;&lt;code&gt;npx --package @ga-ut/ce ce-cli bundle --entry ./src/main.js --out ./dist/app.js --css ./src/ce.css&lt;/code&gt;&lt;/pre&gt;
+        &lt;p&gt;The bundle command supports static relative imports, &lt;code&gt;@ga-ut/ce/web&lt;/code&gt;, and a virtual &lt;code&gt;ce:styles&lt;/code&gt; import:&lt;/p&gt;
+        &lt;pre&gt;&lt;code&gt;import { config } from &quot;@ga-ut/ce/web&quot;;
+import styles from &quot;ce:styles&quot;;
+import { routes } from &quot;./routes.js&quot;;
+
+config({
+  globalStyles: [styles],
+  entryPoint: &quot;ce-app&quot;,
+  routes
+});&lt;/code&gt;&lt;/pre&gt;
+        &lt;p&gt;The bundled entry supports static relative imports, &lt;code&gt;@ga-ut/ce/web&lt;/code&gt;, and &lt;code&gt;ce:styles&lt;/code&gt;. It intentionally does not transpile TypeScript, process JSX, resolve arbitrary &lt;code&gt;node_modules&lt;/code&gt;, minify, or support dynamic &lt;code&gt;import()&lt;/code&gt;. Existing app bundlers can still consume CE normally through &lt;code&gt;@ga-ut/ce/web&lt;/code&gt;; the CLI is a small CE-focused path for projects that do not want another bundler.&lt;/p&gt;
+
+        &lt;h3 id=&quot;semver-policy&quot;&gt;SemVer policy&lt;/h3&gt;
+        &lt;ul&gt;
+          &lt;li&gt;&lt;strong&gt;MAJOR:&lt;/strong&gt; public signature changes, component lifecycle behavior changes, or routing contract changes.&lt;/li&gt;
+          &lt;li&gt;&lt;strong&gt;MINOR:&lt;/strong&gt; new optional parameters and non-breaking helpers.&lt;/li&gt;
+          &lt;li&gt;&lt;strong&gt;PATCH:&lt;/strong&gt; bug fixes and performance improvements with the same public contract.&lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/article&gt;
+" toc="&lt;nav class=&quot;generated-toc&quot; aria-label=&quot;On this page&quot;&gt;
+              &lt;h2&gt;On this page&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;#ce-public-api&quot; data-depth=&quot;2&quot;&gt;CE Public API&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#import-paths&quot; data-depth=&quot;3&quot;&gt;Import paths&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#component-api&quot; data-depth=&quot;3&quot;&gt;Component API&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#runtime-config&quot; data-depth=&quot;3&quot;&gt;Runtime Config&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#router-api&quot; data-depth=&quot;3&quot;&gt;Router API&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#static-snapshot-api&quot; data-depth=&quot;3&quot;&gt;Static Snapshot API&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#app-build-cli&quot; data-depth=&quot;3&quot;&gt;App Build CLI&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#browser-bundle-cli&quot; data-depth=&quot;3&quot;&gt;Browser Bundle CLI&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#semver-policy&quot; data-depth=&quot;3&quot;&gt;SemVer policy&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/nav&gt;">
     <div class="site-page">
       <header class="site-header">
         <div class="site-header__inner">
@@ -57,6 +300,7 @@
 
         <h3 id="import-paths">Import paths</h3>
         <pre><code>import {
+  config,
   define,
   derived,
   effect,
@@ -64,7 +308,6 @@
   match,
   navigate,
   renderStatic,
-  setEntryPoint,
   signal,
 } from "@ga-ut/ce/web";
 
@@ -128,17 +371,50 @@ const unsubscribe = count.subscribe((value) =&gt; console.log(value));</code></p
 `</code></pre>
         <p>Signals patch text and attribute positions directly. Non-signal render callback values participate in structural rerenders.</p>
 
+        <h3 id="runtime-config">Runtime Config</h3>
+        <h4>config(options?)</h4>
+        <p>Configures runtime-wide behavior for CE web components. Global styles are shared across shadow roots through <code>adoptedStyleSheets</code> when the browser supports it, with a scoped <code>&lt;style&gt;</code> fallback for environments that do not.</p>
+        <pre><code>import { config, define, html } from "@ga-ut/ce/web";
+import styles from "./ce.css?inline";
+
+const homePage = define(function HomePage() {
+  return html`&lt;main class="grid gap-4 p-4"&gt;Home&lt;/main&gt;`;
+});
+
+config({
+  globalStyles: [styles],
+  entryPoint: {
+    selector: "ce-app",
+    rootElement: document.querySelector("#app"),
+    hydrate: false
+  },
+  routes: [
+    {
+      path: "/",
+      tag: homePage
+    }
+  ]
+});</code></pre>
+        <p><code>globalStyles</code> accepts compiled CSS strings or <code>CSSStyleSheet</code> instances. CSS generation stays with the app toolchain, such as Vite, PostCSS, Tailwind CSS, UnoCSS, or plain CSS. CE only adopts the resulting stylesheet inside component shadow roots.</p>
+
         <h3 id="router-api">Router API</h3>
-        <h4>setEntryPoint(entryPoint, options?)</h4>
-        <p>Sets the router mount element. CE reuses an existing matching element or creates one.</p>
 
         <h4>navigate(path)</h4>
-        <p>Supports history paths such as <code>/users</code> and hash paths such as <code>#/users</code>, then renders the registered route.</p>
-        <pre><code>define(function UsersPage() {
+        <p>Supports history paths such as <code>/users</code> and hash paths such as <code>#/users</code>, then renders the route registered through <code>config({ routes })</code>.</p>
+        <pre><code>const usersPage = define(function UsersPage() {
   return html`&lt;h1&gt;Users&lt;/h1&gt;`;
-}, { route: "/users" });
+});
 
-setEntryPoint("ce-entry");
+config({
+  entryPoint: "ce-entry",
+  routes: [
+    {
+      path: "/users",
+      tag: usersPage
+    }
+  ]
+});
+
 await navigate("/users");</code></pre>
 
         <h3 id="static-snapshot-api">Static Snapshot API</h3>
@@ -175,25 +451,44 @@ await navigate("/users");</code></pre>
         </ul>
         <p>Use <code>mode: "light-dom"</code> when the static output should be emitted as normal children instead of Declarative Shadow DOM.</p>
 
-        <h3 id="static-site-cli">Static Site CLI</h3>
-        <p>Create an entry module that exports pages:</p>
-        <pre><code>import { html, signal } from "@ga-ut/ce/web";
+        <h3 id="app-build-cli">App Build CLI</h3>
+        <p>Create a browser entry that configures the CE app:</p>
+        <pre><code>import { config, define, html } from "@ga-ut/ce/web";
+import styles from "ce:styles";
 
-function HomePage() {
-  const title = signal("CE Static Site");
-  return html`&lt;main&gt;&lt;h1&gt;${title}&lt;/h1&gt;&lt;/main&gt;`;
-}
+const homePageTag = define(function HomePage() {
+  return html`&lt;main class="p-4"&gt;&lt;h1&gt;CE App&lt;/h1&gt;&lt;/main&gt;`;
+});
 
-export const pages = [
-  {
-    path: "index.html",
-    title: "CE Static Site",
-    component: HomePage
-  }
-];</code></pre>
-        <p>Then generate static HTML locally or in CI:</p>
-        <pre><code>npx @ga-ut/ce build --entry ./pages.mjs --out ./dist</code></pre>
-        <p>The CLI imports the entry, calls <code>renderStatic</code> for each page component, and writes complete HTML files to the output directory.</p>
+config({
+  globalStyles: [styles],
+  entryPoint: "ce-app",
+  routes: [{ path: "/", tag: homePageTag }]
+});</code></pre>
+        <p>Then generate an app shell and bundled browser module locally or in CI:</p>
+        <pre><code>npx --package @ga-ut/ce ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css</code></pre>
+        <p>The command writes <code>dist/index.html</code> and <code>dist/app.js</code>. Use <code>--root</code> to choose the generated root custom element tag and <code>--title</code> to set the document title.</p>
+        <pre><code>npx --package @ga-ut/ce ce-cli build \
+  --entry ./src/main.js \
+  --out ./dist \
+  --css ./src/ce.css \
+  --root ce-app \
+  --title "CE App"</code></pre>
+
+        <h3 id="browser-bundle-cli">Browser Bundle CLI</h3>
+        <p>Use <code>bundle</code> when you only want one browser ESM file without the generated HTML shell:</p>
+        <pre><code>npx --package @ga-ut/ce ce-cli bundle --entry ./src/main.js --out ./dist/app.js --css ./src/ce.css</code></pre>
+        <p>The bundle command supports static relative imports, <code>@ga-ut/ce/web</code>, and a virtual <code>ce:styles</code> import:</p>
+        <pre><code>import { config } from "@ga-ut/ce/web";
+import styles from "ce:styles";
+import { routes } from "./routes.js";
+
+config({
+  globalStyles: [styles],
+  entryPoint: "ce-app",
+  routes
+});</code></pre>
+        <p>The bundled entry supports static relative imports, <code>@ga-ut/ce/web</code>, and <code>ce:styles</code>. It intentionally does not transpile TypeScript, process JSX, resolve arbitrary <code>node_modules</code>, minify, or support dynamic <code>import()</code>. Existing app bundlers can still consume CE normally through <code>@ga-ut/ce/web</code>; the CLI is a small CE-focused path for projects that do not want another bundler.</p>
 
         <h3 id="semver-policy">SemVer policy</h3>
         <ul>
@@ -215,9 +510,11 @@ export const pages = [
                 <li><a href="#ce-public-api" data-depth="2">CE Public API</a></li>
                 <li><a href="#import-paths" data-depth="3">Import paths</a></li>
                 <li><a href="#component-api" data-depth="3">Component API</a></li>
+                <li><a href="#runtime-config" data-depth="3">Runtime Config</a></li>
                 <li><a href="#router-api" data-depth="3">Router API</a></li>
                 <li><a href="#static-snapshot-api" data-depth="3">Static Snapshot API</a></li>
-                <li><a href="#static-site-cli" data-depth="3">Static Site CLI</a></li>
+                <li><a href="#app-build-cli" data-depth="3">App Build CLI</a></li>
+                <li><a href="#browser-bundle-cli" data-depth="3">Browser Bundle CLI</a></li>
                 <li><a href="#semver-policy" data-depth="3">SemVer policy</a></li>
               </ul>
             </nav>

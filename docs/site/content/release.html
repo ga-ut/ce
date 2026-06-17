@@ -32,7 +32,7 @@
           <li>Confirm <code>npm view @ga-ut/ce version</code> does not find an existing published package.</li>
           <li>Use named web-runtime imports such as <code>import { define, html, signal } from "@ga-ut/ce/web";</code>.</li>
           <li>Confirm consumers do not use legacy object definitions.</li>
-          <li>Use <code>ce-cli build --entry ./pages.mjs --out ./dist</code> for CE-based static sites.</li>
+          <li>Use <code>ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css</code> when a CE app is built without an external bundler.</li>
           <li>Publish from a matching <code>v0.1.0</code> tag only.</li>
         </ol>
 
@@ -41,7 +41,7 @@
           <li>Route transitions</li>
           <li>State updates</li>
           <li>Event handling</li>
-          <li>Static page generation through <code>ce-cli</code></li>
+          <li>App build through <code>ce-cli</code></li>
           <li>Published Pages status board timestamp</li>
         </ul>
 

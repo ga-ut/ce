@@ -7,7 +7,191 @@
     <link rel="stylesheet" href="assets/styles.css?v=20260607-static-docs" />
   </head>
   <body>
-<docs-page>
+<docs-page top-nav="&lt;a href=&quot;index.html&quot; aria-current=&quot;page&quot;&gt;Overview&lt;/a&gt;
+              &lt;a href=&quot;usage.html&quot;&gt;Usage&lt;/a&gt;
+              &lt;a href=&quot;api.html&quot;&gt;API&lt;/a&gt;
+              &lt;a href=&quot;components.html&quot;&gt;Components&lt;/a&gt;
+              &lt;a href=&quot;roadmap.html&quot;&gt;Roadmap&lt;/a&gt;
+              &lt;a href=&quot;release.html&quot;&gt;Release&lt;/a&gt;
+              &lt;a href=&quot;playground.html&quot;&gt;Playground&lt;/a&gt;" side-nav="&lt;section class=&quot;docs-nav-group&quot;&gt;
+              &lt;h2&gt;Start&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;index.html&quot; aria-current=&quot;page&quot;&gt;Overview&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;usage.html&quot;&gt;Usage guide&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;playground.html&quot;&gt;Playground&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/section&gt;
+            &lt;section class=&quot;docs-nav-group&quot;&gt;
+              &lt;h2&gt;Reference&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;api.html&quot;&gt;Public API&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;components.html&quot;&gt;Component model&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;roadmap.html&quot;&gt;Roadmap&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/section&gt;
+            &lt;section class=&quot;docs-nav-group&quot;&gt;
+              &lt;h2&gt;Project&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;release.html&quot;&gt;Release process&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/section&gt;" content="      &lt;section class=&quot;docs-hero&quot;&gt;
+        &lt;p class=&quot;eyebrow&quot;&gt;CE documentation&lt;/p&gt;
+        &lt;h2 id=&quot;build-custom-elements-with-local-state-scoped-dom-and-small-runtime-primitives&quot;&gt;Build custom elements with local state, scoped DOM, and small runtime primitives.&lt;/h2&gt;
+        &lt;p&gt;CE is organized around named function components, signal-driven updates, explicit render states, and optional routing. This page explains the working model directly.&lt;/p&gt;
+      &lt;/section&gt;
+
+      &lt;section class=&quot;docs-section&quot;&gt;
+        &lt;h2 id=&quot;component-model&quot;&gt;Component model&lt;/h2&gt;
+        &lt;p&gt;A component is a named function. The function name becomes the custom element tag, and the function body owns props, signals, derived values, lifecycle cleanup, and event handlers.&lt;/p&gt;
+        &lt;pre&gt;&lt;code&gt;import { define, html, signal, derived } from &quot;@ga-ut/ce/web&quot;;
+
+define(function UserCounter({ props, lifecycle }) {
+  const count = signal(props.initial ?? 0);
+  const doubled = derived(() =&amp;gt; count() * 2);
+
+  lifecycle.cleanup(() =&amp;gt; {
+    // clear timers, listeners, or requests here
+  });
+
+  return html`
+    &amp;lt;button onclick=${() =&amp;gt; count.update((value) =&amp;gt; value + 1)}&amp;gt;
+      ${count} / ${doubled}
+    &amp;lt;/button&amp;gt;
+  `;
+}, {
+  props: {
+    initial: Number
+  }
+});&lt;/code&gt;&lt;/pre&gt;
+      &lt;/section&gt;
+
+      &lt;section class=&quot;docs-section&quot;&gt;
+        &lt;h2 id=&quot;runtime-flow&quot;&gt;Runtime flow&lt;/h2&gt;
+        &lt;p&gt;Use this sequence when building a CE component. Each step is local to the component, so the final element stays portable.&lt;/p&gt;
+        &lt;ol class=&quot;onboarding-list&quot;&gt;
+          &lt;li&gt;
+            &lt;span class=&quot;step-index&quot;&gt;01&lt;/span&gt;
+            &lt;div&gt;
+              &lt;h3 id=&quot;declare-the-element-boundary&quot;&gt;Declare the element boundary&lt;/h3&gt;
+              &lt;p&gt;Name the component function and define typed props. The element tag is derived from the function name.&lt;/p&gt;
+            &lt;/div&gt;
+          &lt;/li&gt;
+          &lt;li&gt;
+            &lt;span class=&quot;step-index&quot;&gt;02&lt;/span&gt;
+            &lt;div&gt;
+              &lt;h3 id=&quot;keep-state-close-to-setup&quot;&gt;Keep state close to setup&lt;/h3&gt;
+              &lt;p&gt;Use &lt;code&gt;signal&lt;/code&gt; for writable values and &lt;code&gt;derived&lt;/code&gt; for computed values that depend on other signals.&lt;/p&gt;
+            &lt;/div&gt;
+          &lt;/li&gt;
+          &lt;li&gt;
+            &lt;span class=&quot;step-index&quot;&gt;03&lt;/span&gt;
+            &lt;div&gt;
+              &lt;h3 id=&quot;render-explicit-branches&quot;&gt;Render explicit branches&lt;/h3&gt;
+              &lt;p&gt;Use &lt;code&gt;match&lt;/code&gt; for idle, loading, success, and failure states instead of hiding control flow in nested conditionals.&lt;/p&gt;
+            &lt;/div&gt;
+          &lt;/li&gt;
+          &lt;li&gt;
+            &lt;span class=&quot;step-index&quot;&gt;04&lt;/span&gt;
+            &lt;div&gt;
+              &lt;h3 id=&quot;clean-up-on-disconnect&quot;&gt;Clean up on disconnect&lt;/h3&gt;
+              &lt;p&gt;Register cleanup for timers, observers, subscriptions, and in-flight request state through the lifecycle helper.&lt;/p&gt;
+            &lt;/div&gt;
+          &lt;/li&gt;
+        &lt;/ol&gt;
+      &lt;/section&gt;
+
+      &lt;section class=&quot;docs-section&quot;&gt;
+        &lt;h2 id=&quot;install-and-start&quot;&gt;Install and start&lt;/h2&gt;
+        &lt;p&gt;Install the runtime, import the web entrypoint, then call &lt;code&gt;config()&lt;/code&gt; once from the browser entry.&lt;/p&gt;
+        &lt;pre&gt;&lt;code&gt;npm i @ga-ut/ce&lt;/code&gt;&lt;/pre&gt;
+        &lt;pre&gt;&lt;code&gt;import { config, define, html, signal } from &quot;@ga-ut/ce/web&quot;;
+import styles from &quot;./ce.css?inline&quot;;
+
+const appTag = define(function AppPage() {
+  const count = signal(0);
+  return html`&amp;lt;button onclick=${() =&amp;gt; count.update((value) =&amp;gt; value + 1)}&amp;gt;${count}&amp;lt;/button&amp;gt;`;
+});
+
+config({
+  globalStyles: [styles],
+  entryPoint: &quot;ce-app&quot;,
+  routes: [{ path: &quot;/&quot;, tag: appTag }]
+});&lt;/code&gt;&lt;/pre&gt;
+      &lt;/section&gt;
+
+      &lt;section class=&quot;docs-section&quot;&gt;
+        &lt;h2 id=&quot;core-ideas&quot;&gt;Core ideas&lt;/h2&gt;
+        &lt;div class=&quot;concept-grid&quot;&gt;
+          &lt;article class=&quot;concept&quot;&gt;
+            &lt;h3 id=&quot;named-components&quot;&gt;Named components&lt;/h3&gt;
+            &lt;p&gt;&lt;code&gt;define(function MyCounter)&lt;/code&gt; registers &lt;code&gt;my-counter&lt;/code&gt; without a separate tag string.&lt;/p&gt;
+          &lt;/article&gt;
+          &lt;article class=&quot;concept&quot;&gt;
+            &lt;h3 id=&quot;signals-first&quot;&gt;Signals first&lt;/h3&gt;
+            &lt;p&gt;&lt;code&gt;signal&lt;/code&gt; and &lt;code&gt;derived&lt;/code&gt; keep values close to the component setup code.&lt;/p&gt;
+          &lt;/article&gt;
+          &lt;article class=&quot;concept&quot;&gt;
+            &lt;h3 id=&quot;explicit-states&quot;&gt;Explicit states&lt;/h3&gt;
+            &lt;p&gt;&lt;code&gt;match&lt;/code&gt; keeps loading, success, and failure branches visible in render code.&lt;/p&gt;
+          &lt;/article&gt;
+          &lt;article class=&quot;concept&quot;&gt;
+            &lt;h3 id=&quot;shared-styles&quot;&gt;Shared styles&lt;/h3&gt;
+            &lt;p&gt;&lt;code&gt;globalStyles&lt;/code&gt; accepts compiled CSS from Tailwind, PostCSS, Vite inline CSS, or plain CSS and shares it across shadow roots.&lt;/p&gt;
+          &lt;/article&gt;
+          &lt;article class=&quot;concept&quot;&gt;
+            &lt;h3 id=&quot;small-app-build&quot;&gt;Small app build&lt;/h3&gt;
+            &lt;p&gt;&lt;code&gt;ce-cli build&lt;/code&gt; can emit an app shell and browser module for CE apps without adding a project bundler.&lt;/p&gt;
+          &lt;/article&gt;
+        &lt;/div&gt;
+      &lt;/section&gt;
+
+      &lt;section class=&quot;docs-section&quot;&gt;
+        &lt;h2 id=&quot;release-rules&quot;&gt;Release rules&lt;/h2&gt;
+        &lt;p&gt;Source changes must pass lint, test, and build. Event behavior changes also run event tests. Documentation changes validate docs data and internal links.&lt;/p&gt;
+        &lt;ul class=&quot;reference-list&quot;&gt;
+          &lt;li&gt;
+            &lt;div&gt;
+              &lt;h3 id=&quot;runtime-gate&quot;&gt;Runtime gate&lt;/h3&gt;
+              &lt;p&gt;&lt;code&gt;npm run lint &amp;amp;&amp;amp; npm test &amp;amp;&amp;amp; npm run build&lt;/code&gt; protects source, playground, and package output.&lt;/p&gt;
+            &lt;/div&gt;
+          &lt;/li&gt;
+          &lt;li&gt;
+            &lt;div&gt;
+              &lt;h3 id=&quot;event-gate&quot;&gt;Event gate&lt;/h3&gt;
+              &lt;p&gt;&lt;code&gt;npm run test:events&lt;/code&gt; covers custom event wiring, rerender handler stability, and docs page link policy.&lt;/p&gt;
+            &lt;/div&gt;
+          &lt;/li&gt;
+          &lt;li&gt;
+            &lt;div&gt;
+              &lt;h3 id=&quot;docs-gate&quot;&gt;Docs gate&lt;/h3&gt;
+              &lt;p&gt;&lt;code&gt;npm run docs:validate&lt;/code&gt; checks JSON data, markdown links, and internal documentation integrity.&lt;/p&gt;
+            &lt;/div&gt;
+          &lt;/li&gt;
+        &lt;/ul&gt;
+      &lt;/section&gt;
+" toc="&lt;nav class=&quot;generated-toc&quot; aria-label=&quot;On this page&quot;&gt;
+              &lt;h2&gt;On this page&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;#build-custom-elements-with-local-state-scoped-dom-and-small-runtime-primitives&quot; data-depth=&quot;2&quot;&gt;Build custom elements with local state, scoped DOM, and small runtime primitives.&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#component-model&quot; data-depth=&quot;2&quot;&gt;Component model&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#runtime-flow&quot; data-depth=&quot;2&quot;&gt;Runtime flow&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#declare-the-element-boundary&quot; data-depth=&quot;3&quot;&gt;Declare the element boundary&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#keep-state-close-to-setup&quot; data-depth=&quot;3&quot;&gt;Keep state close to setup&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#render-explicit-branches&quot; data-depth=&quot;3&quot;&gt;Render explicit branches&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#clean-up-on-disconnect&quot; data-depth=&quot;3&quot;&gt;Clean up on disconnect&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#install-and-start&quot; data-depth=&quot;2&quot;&gt;Install and start&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#core-ideas&quot; data-depth=&quot;2&quot;&gt;Core ideas&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#named-components&quot; data-depth=&quot;3&quot;&gt;Named components&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#signals-first&quot; data-depth=&quot;3&quot;&gt;Signals first&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#explicit-states&quot; data-depth=&quot;3&quot;&gt;Explicit states&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#shared-styles&quot; data-depth=&quot;3&quot;&gt;Shared styles&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#small-app-build&quot; data-depth=&quot;3&quot;&gt;Small app build&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#release-rules&quot; data-depth=&quot;2&quot;&gt;Release rules&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#runtime-gate&quot; data-depth=&quot;3&quot;&gt;Runtime gate&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#event-gate&quot; data-depth=&quot;3&quot;&gt;Event gate&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#docs-gate&quot; data-depth=&quot;3&quot;&gt;Docs gate&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/nav&gt;">
     <div class="site-page">
       <header class="site-header">
         <div class="site-header__inner">
@@ -118,6 +302,25 @@ define(function UserCounter({ props, lifecycle }) {
       </section>
 
       <section class="docs-section">
+        <h2 id="install-and-start">Install and start</h2>
+        <p>Install the runtime, import the web entrypoint, then call <code>config()</code> once from the browser entry.</p>
+        <pre><code>npm i @ga-ut/ce</code></pre>
+        <pre><code>import { config, define, html, signal } from "@ga-ut/ce/web";
+import styles from "./ce.css?inline";
+
+const appTag = define(function AppPage() {
+  const count = signal(0);
+  return html`&lt;button onclick=${() =&gt; count.update((value) =&gt; value + 1)}&gt;${count}&lt;/button&gt;`;
+});
+
+config({
+  globalStyles: [styles],
+  entryPoint: "ce-app",
+  routes: [{ path: "/", tag: appTag }]
+});</code></pre>
+      </section>
+
+      <section class="docs-section">
         <h2 id="core-ideas">Core ideas</h2>
         <div class="concept-grid">
           <article class="concept">
@@ -131,6 +334,14 @@ define(function UserCounter({ props, lifecycle }) {
           <article class="concept">
             <h3 id="explicit-states">Explicit states</h3>
             <p><code>match</code> keeps loading, success, and failure branches visible in render code.</p>
+          </article>
+          <article class="concept">
+            <h3 id="shared-styles">Shared styles</h3>
+            <p><code>globalStyles</code> accepts compiled CSS from Tailwind, PostCSS, Vite inline CSS, or plain CSS and shares it across shadow roots.</p>
+          </article>
+          <article class="concept">
+            <h3 id="small-app-build">Small app build</h3>
+            <p><code>ce-cli build</code> can emit an app shell and browser module for CE apps without adding a project bundler.</p>
           </article>
         </div>
       </section>
@@ -176,10 +387,13 @@ define(function UserCounter({ props, lifecycle }) {
                 <li><a href="#keep-state-close-to-setup" data-depth="3">Keep state close to setup</a></li>
                 <li><a href="#render-explicit-branches" data-depth="3">Render explicit branches</a></li>
                 <li><a href="#clean-up-on-disconnect" data-depth="3">Clean up on disconnect</a></li>
+                <li><a href="#install-and-start" data-depth="2">Install and start</a></li>
                 <li><a href="#core-ideas" data-depth="2">Core ideas</a></li>
                 <li><a href="#named-components" data-depth="3">Named components</a></li>
                 <li><a href="#signals-first" data-depth="3">Signals first</a></li>
                 <li><a href="#explicit-states" data-depth="3">Explicit states</a></li>
+                <li><a href="#shared-styles" data-depth="3">Shared styles</a></li>
+                <li><a href="#small-app-build" data-depth="3">Small app build</a></li>
                 <li><a href="#release-rules" data-depth="2">Release rules</a></li>
                 <li><a href="#runtime-gate" data-depth="3">Runtime gate</a></li>
                 <li><a href="#event-gate" data-depth="3">Event gate</a></li>

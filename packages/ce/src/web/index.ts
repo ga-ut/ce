@@ -1,4 +1,5 @@
 export {
+  config,
   define,
   derived,
   effect,
@@ -6,14 +7,16 @@ export {
   match,
   navigate,
   renderStatic,
-  setEntryPoint,
   signal,
 } from "./ce";
 export type {
+  ConfigOptions,
+  ConfigRoute,
   DefineOptions,
   FunctionComponent,
   RenderContent,
   RenderStaticOptions,
   Signal,
+  StyleInput,
   Template,
 } from "./ce";

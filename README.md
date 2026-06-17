@@ -1,13 +1,13 @@
 # CE
 
-CE is a small Custom Elements runtime with function components, signals, scoped rendering, optional routing, and a static-site CLI that can emit Declarative Shadow DOM snapshots.
+CE is a small Custom Elements runtime with function components, signals, scoped rendering, optional routing, and a dependency-free app bundler.
 
 ## Repository Layout
 
 - `packages/ce`: publishable `@ga-ut/ce` package
 - `apps/playground`: interactive playground app
 - `docs`: API notes, release notes, data schema docs, and the generated docs site
-- `docs/site/pages.mjs`: docs site implementation consumed by the CE CLI
+- `docs/site/build.mjs`: docs site build script
 
 ## Setup
 
@@ -15,10 +15,27 @@ CE is a small Custom Elements runtime with function components, signals, scoped 
 bun install
 ```
 
+## Install In An App
+
+```bash
+npm i @ga-ut/ce
+```
+
+Browser code should import from the web entrypoint:
+
+```ts
+import { config, define, html, signal } from "@ga-ut/ce/web";
+```
+
 ## Web Runtime
 
 ```ts
-import { define, derived, html, signal } from "@ga-ut/ce/web";
+import { config, define, derived, html, signal } from "@ga-ut/ce/web";
+import styles from "./ce.css?inline";
+
+config({
+  globalStyles: [styles],
+});
 
 define(function ProductBadge({ props }) {
   const selected = signal(false);
@@ -36,38 +53,61 @@ define(function ProductBadge({ props }) {
 });
 ```
 
-## Static Site CLI
+## App Build CLI
 
-Create a page entry:
+Create a browser entry:
 
 ```js
-import { html, signal } from "@ga-ut/ce/web";
+import { config, define, html } from "@ga-ut/ce/web";
+import styles from "ce:styles";
 
-function HomePage() {
-  const title = signal("CE Static Site");
-  return html`<main><h1>${title}</h1></main>`;
-}
+const homePageTag = define(function HomePage() {
+  return html`<main class="p-4"><h1>CE App</h1></main>`;
+});
 
-export const pages = [
-  {
-    path: "index.html",
-    title: "CE Static Site",
-    component: HomePage,
-  },
-];
+config({
+  globalStyles: [styles],
+  entryPoint: "ce-app",
+  routes: [{ path: "/", tag: homePageTag }],
+});
 ```
 
-Generate static HTML:
+Build the app shell and browser module without installing a global CLI:
 
 ```bash
-npx @ga-ut/ce build --entry ./pages.mjs --out ./dist
+npx --package @ga-ut/ce ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css
 ```
 
-The CLI imports the page entry, calls `renderStatic` for each page component, and writes complete HTML files. The default component output uses Declarative Shadow DOM. Use `mode: "light-dom"` on a page when global document CSS should apply to the generated content.
+The command writes `dist/index.html` and `dist/app.js`. The generated HTML contains a root custom element, and `app.js` contains the CE runtime, relative app modules, and optional `ce:styles` CSS text.
+
+Use `--root` to choose the generated root custom element tag and `--title` to set the document title.
+
+## Browser Bundle CLI
+
+Use `bundle` when you only want the browser module:
+
+```bash
+npx --package @ga-ut/ce ce-cli bundle --entry ./src/main.js --out ./dist/app.js --css ./src/ce.css
+```
+
+The bundle command supports static relative imports, `@ga-ut/ce/web`, and a
+virtual `ce:styles` import:
+
+```js
+import { config } from "@ga-ut/ce/web";
+import styles from "ce:styles";
+import { routes } from "./routes.js";
+
+config({
+  globalStyles: [styles],
+  entryPoint: "ce-app",
+  routes,
+});
+```
 
 ## Docs Site
 
-The local docs site is generated through the package CLI:
+The local docs site is generated through a repository-local build script:
 
 ```bash
 npm run docs:build
@@ -77,10 +117,18 @@ That command runs:
 
 ```bash
 npm run build
-node dist/cli/index.mjs build --entry docs/site/pages.mjs --out docs/site
+node docs/site/build.mjs
 ```
 
-The generated pages live in `docs/site/*.html`. Source content lives in `docs/site/content/*.html`, and page assembly lives in `docs/site/pages.mjs`.
+The generated pages live in `docs/site/*.html`. Source content lives in `docs/site/content/*.html`, and page assembly lives in `docs/site/build.mjs`.
+
+Preview the generated docs from the repository root so the playground can load the built CE runtime:
+
+```bash
+python3 -m http.server 4175 --bind 127.0.0.1
+```
+
+Open `http://127.0.0.1:4175/docs/site/index.html`. The docs playground is at `http://127.0.0.1:4175/docs/site/playground.html`.
 
 ## Playground
 
@@ -95,7 +143,7 @@ Default URL: `http://127.0.0.1:4173`
 - `@ga-ut/ce`: core-only package root
 - `@ga-ut/ce/core`: core-only entrypoint
 - `@ga-ut/ce/web`: browser runtime helpers and static snapshot helpers
-- `ce-cli`: package binary for static page generation
+- `ce-cli`: package binary for CE app build and browser bundling
 
 ## Quality Gates
 

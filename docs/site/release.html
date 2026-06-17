@@ -7,7 +7,95 @@
     <link rel="stylesheet" href="assets/styles.css?v=20260607-static-docs" />
   </head>
   <body>
-<docs-page>
+<docs-page top-nav="&lt;a href=&quot;index.html&quot;&gt;Overview&lt;/a&gt;
+              &lt;a href=&quot;usage.html&quot;&gt;Usage&lt;/a&gt;
+              &lt;a href=&quot;api.html&quot;&gt;API&lt;/a&gt;
+              &lt;a href=&quot;components.html&quot;&gt;Components&lt;/a&gt;
+              &lt;a href=&quot;roadmap.html&quot;&gt;Roadmap&lt;/a&gt;
+              &lt;a href=&quot;release.html&quot; aria-current=&quot;page&quot;&gt;Release&lt;/a&gt;
+              &lt;a href=&quot;playground.html&quot;&gt;Playground&lt;/a&gt;" side-nav="&lt;section class=&quot;docs-nav-group&quot;&gt;
+              &lt;h2&gt;Start&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;index.html&quot;&gt;Overview&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;usage.html&quot;&gt;Usage guide&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;playground.html&quot;&gt;Playground&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/section&gt;
+            &lt;section class=&quot;docs-nav-group&quot;&gt;
+              &lt;h2&gt;Reference&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;api.html&quot;&gt;Public API&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;components.html&quot;&gt;Component model&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;roadmap.html&quot;&gt;Roadmap&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/section&gt;
+            &lt;section class=&quot;docs-nav-group&quot;&gt;
+              &lt;h2&gt;Project&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;release.html&quot; aria-current=&quot;page&quot;&gt;Release process&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/section&gt;" content="      &lt;article class=&quot;doc-page&quot;&gt;
+        &lt;h2 id=&quot;release-verification-and-rollback&quot;&gt;Release, Verification, and Rollback&lt;/h2&gt;
+        &lt;p&gt;Use this page before tagging a release or publishing the package. It separates runtime validation, package checks, and post-release safety work.&lt;/p&gt;
+
+        &lt;h3 id=&quot;ci-gate&quot;&gt;CI gate&lt;/h3&gt;
+        &lt;p&gt;Tag a release only when &lt;code&gt;lint + test + build&lt;/code&gt; pass.&lt;/p&gt;
+
+        &lt;h3 id=&quot;pre-publish-verification&quot;&gt;Pre-publish verification&lt;/h3&gt;
+        &lt;ol&gt;
+          &lt;li&gt;&lt;code&gt;bun install&lt;/code&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;code&gt;npm run lint&lt;/code&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;code&gt;npm run test&lt;/code&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;code&gt;npm run build&lt;/code&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;code&gt;npm run test:events&lt;/code&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;code&gt;npm run docs:build&lt;/code&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;code&gt;npm run docs:validate&lt;/code&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;code&gt;npm run pack:check&lt;/code&gt;&lt;/li&gt;
+        &lt;/ol&gt;
+
+        &lt;h3 id=&quot;publish&quot;&gt;Publish&lt;/h3&gt;
+        &lt;p&gt;Publish from &lt;code&gt;packages/ce&lt;/code&gt; with &lt;code&gt;npm publish --access public&lt;/code&gt;. Organization policy can override access mode.&lt;/p&gt;
+
+        &lt;h3 id=&quot;release-notes&quot;&gt;Release notes&lt;/h3&gt;
+        &lt;ul&gt;
+          &lt;li&gt;Breaking changes&lt;/li&gt;
+          &lt;li&gt;Migration guide&lt;/li&gt;
+          &lt;li&gt;Affected API list&lt;/li&gt;
+        &lt;/ul&gt;
+
+        &lt;h4&gt;Initial publish checklist for v0.1.0&lt;/h4&gt;
+        &lt;ol&gt;
+          &lt;li&gt;Confirm &lt;code&gt;npm view @ga-ut/ce version&lt;/code&gt; does not find an existing published package.&lt;/li&gt;
+          &lt;li&gt;Use named web-runtime imports such as &lt;code&gt;import { define, html, signal } from &quot;@ga-ut/ce/web&quot;;&lt;/code&gt;.&lt;/li&gt;
+          &lt;li&gt;Confirm consumers do not use legacy object definitions.&lt;/li&gt;
+          &lt;li&gt;Use &lt;code&gt;ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css&lt;/code&gt; when a CE app is built without an external bundler.&lt;/li&gt;
+          &lt;li&gt;Publish from a matching &lt;code&gt;v0.1.0&lt;/code&gt; tag only.&lt;/li&gt;
+        &lt;/ol&gt;
+
+        &lt;h3 id=&quot;post-release-smoke-test&quot;&gt;Post-release smoke test&lt;/h3&gt;
+        &lt;ul&gt;
+          &lt;li&gt;Route transitions&lt;/li&gt;
+          &lt;li&gt;State updates&lt;/li&gt;
+          &lt;li&gt;Event handling&lt;/li&gt;
+          &lt;li&gt;App build through &lt;code&gt;ce-cli&lt;/code&gt;&lt;/li&gt;
+          &lt;li&gt;Published Pages status board timestamp&lt;/li&gt;
+        &lt;/ul&gt;
+
+        &lt;h3 id=&quot;rollback-safety&quot;&gt;Rollback safety&lt;/h3&gt;
+        &lt;p&gt;If an issue is found, publish an immediate patch release with the fix and keep the rollback playbook in the release PR.&lt;/p&gt;
+      &lt;/article&gt;
+" toc="&lt;nav class=&quot;generated-toc&quot; aria-label=&quot;On this page&quot;&gt;
+              &lt;h2&gt;On this page&lt;/h2&gt;
+              &lt;ul&gt;
+                &lt;li&gt;&lt;a href=&quot;#release-verification-and-rollback&quot; data-depth=&quot;2&quot;&gt;Release, Verification, and Rollback&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#ci-gate&quot; data-depth=&quot;3&quot;&gt;CI gate&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#pre-publish-verification&quot; data-depth=&quot;3&quot;&gt;Pre-publish verification&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#publish&quot; data-depth=&quot;3&quot;&gt;Publish&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#release-notes&quot; data-depth=&quot;3&quot;&gt;Release notes&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#post-release-smoke-test&quot; data-depth=&quot;3&quot;&gt;Post-release smoke test&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href=&quot;#rollback-safety&quot; data-depth=&quot;3&quot;&gt;Rollback safety&lt;/a&gt;&lt;/li&gt;
+              &lt;/ul&gt;
+            &lt;/nav&gt;">
     <div class="site-page">
       <header class="site-header">
         <div class="site-header__inner">
@@ -85,7 +173,7 @@
           <li>Confirm <code>npm view @ga-ut/ce version</code> does not find an existing published package.</li>
           <li>Use named web-runtime imports such as <code>import { define, html, signal } from "@ga-ut/ce/web";</code>.</li>
           <li>Confirm consumers do not use legacy object definitions.</li>
-          <li>Use <code>ce-cli build --entry ./pages.mjs --out ./dist</code> for CE-based static sites.</li>
+          <li>Use <code>ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css</code> when a CE app is built without an external bundler.</li>
           <li>Publish from a matching <code>v0.1.0</code> tag only.</li>
         </ol>
 
@@ -94,7 +182,7 @@
           <li>Route transitions</li>
           <li>State updates</li>
           <li>Event handling</li>
-          <li>Static page generation through <code>ce-cli</code></li>
+          <li>App build through <code>ce-cli</code></li>
           <li>Published Pages status board timestamp</li>
         </ul>
 

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CE } from "../packages/ce/src/web/ce";
 import {
+  config,
   define,
   derived,
   effect,
@@ -8,7 +9,6 @@ import {
   match,
   navigate,
   renderStatic,
-  setEntryPoint,
   signal,
 } from "../packages/ce/src/web";
 
@@ -22,6 +22,8 @@ describe("CE function component runtime", () => {
     CE.routes.clear();
     CE.entryElement = null;
     CE.entryPoint = "";
+    CE.globalStyleEntries = [];
+    CE.configured = false;
   });
 
   it("rejects legacy object definitions", () => {
@@ -54,6 +56,32 @@ describe("CE function component runtime", () => {
     await wait();
 
     expect(el.shadowRoot?.textContent?.trim()).toBe("1/2");
+  });
+
+  it("supports multiple inline event handlers on the same element", async () => {
+    const calls: string[] = [];
+
+    define(function XMultiEventButton() {
+      return html`
+        <button
+          onclick=${() => calls.push("click")}
+          onmouseover=${() => calls.push("mouseover")}
+        >
+          trigger
+        </button>
+      `;
+    });
+
+    const el = document.createElement("x-multi-event-button") as HTMLElement;
+    document.body.append(el);
+    await wait();
+
+    const button = el.shadowRoot?.querySelector("button") as HTMLButtonElement;
+    button.click();
+    button.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+    await wait();
+
+    expect(calls).toEqual(["click", "mouseover"]);
   });
 
   it("isolates local signals between component instances", async () => {
@@ -300,21 +328,26 @@ describe("CE function component runtime", () => {
   });
 
   it("switches route components with navigate", async () => {
-    setEntryPoint("ce-entry");
+    const homePageTag = define(function XHomePage() {
+      return "<p>home</p>";
+    });
+    const usersPageTag = define(function XUsersPage() {
+      return "<p>users</p>";
+    });
 
-    define(
-      function XHomePage() {
-        return "<p>home</p>";
-      },
-      { route: "/" }
-    );
-
-    define(
-      function XUsersPage() {
-        return "<p>users</p>";
-      },
-      { route: "/users" }
-    );
+    config({
+      entryPoint: "ce-entry",
+      routes: [
+        {
+          path: "/",
+          tag: homePageTag,
+        },
+        {
+          path: "/users",
+          tag: usersPageTag,
+        },
+      ],
+    });
 
     await navigate("/");
     await wait();
@@ -326,29 +359,32 @@ describe("CE function component runtime", () => {
   });
 
   it("supports route preload and error fallback", async () => {
-    setEntryPoint("ce-route-entry");
-
     const preload = vi.fn(async () => {});
+    const preloadPageTag = define(function XPreloadPage() {
+      return "<p>preload</p>";
+    });
+    const errorPageTag = define(function XErrorPage() {
+      return "<p>error</p>";
+    });
 
-    define(
-      function XPreloadPage() {
-        return "<p>preload</p>";
-      },
-      { route: "/preload", preload }
-    );
-
-    define(
-      function XErrorPage() {
-        return "<p>error</p>";
-      },
-      {
-        route: "/error",
-        preload: async () => {
-          throw new Error("boom");
+    config({
+      entryPoint: "ce-route-entry",
+      routes: [
+        {
+          path: "/preload",
+          preload,
+          tag: preloadPageTag,
         },
-        onError: (error) => `<p>${(error as Error).message}</p>`,
-      }
-    );
+        {
+          path: "/error",
+          preload: async () => {
+            throw new Error("boom");
+          },
+          onError: (error) => `<p>${(error as Error).message}</p>`,
+          tag: errorPageTag,
+        },
+      ],
+    });
 
     await navigate("/preload");
     expect(preload).toHaveBeenCalledWith("/preload");
@@ -358,30 +394,108 @@ describe("CE function component runtime", () => {
     expect(CE.entryElement?.innerHTML).toContain("boom");
   });
 
+  it("configures entrypoint routes and shared shadow styles", async () => {
+    const configHomePageTag = define(function XConfigHomePage() {
+      return html`<p class="from-global">configured</p>`;
+    });
+
+    config({
+      globalStyles: [".from-global { color: rgb(37, 99, 235); }"],
+      entryPoint: "ce-config-entry",
+      routes: [
+        {
+          path: "/",
+          tag: configHomePageTag,
+        },
+      ],
+    });
+
+    await navigate("/");
+    await wait();
+
+    const page = CE.entryElement?.firstElementChild as HTMLElement;
+    const style = page.shadowRoot?.querySelector<HTMLStyleElement>(
+      "style[data-ce-global-style]"
+    );
+
+    expect(CE.entryElement?.tagName.toLowerCase()).toBe("ce-config-entry");
+    expect(page.tagName.toLowerCase()).toBe("x-config-home-page");
+    expect(page.shadowRoot?.textContent).toContain("configured");
+    expect(style?.textContent).toContain(".from-global");
+  });
+
+  it("updates existing shadow roots when global styles are configured later", async () => {
+    define(function XLateStyle() {
+      return html`<p class="late-style">late</p>`;
+    });
+
+    const el = document.createElement("x-late-style") as HTMLElement;
+    document.body.append(el);
+    await wait();
+
+    expect(
+      el.shadowRoot?.querySelector<HTMLStyleElement>("style[data-ce-global-style]")
+    ).toBeNull();
+
+    config({
+      globalStyles: [".late-style { color: red; }"],
+    });
+
+    const style = el.shadowRoot?.querySelector<HTMLStyleElement>(
+      "style[data-ce-global-style]"
+    );
+    expect(style?.textContent).toContain(".late-style");
+  });
+
+  it("rejects duplicate config calls", () => {
+    config();
+
+    expect(() => config()).toThrow(/can only be called once/);
+  });
+
+  it("requires an entrypoint when routes are configured", () => {
+    const routeTag = define(function XRouteNeedsEntry() {
+      return "<p>route</p>";
+    });
+
+    expect(() =>
+      config({
+        routes: [
+          {
+            path: "/",
+            tag: routeTag,
+          },
+        ],
+      })
+    ).toThrow(/requires entryPoint/);
+  });
+
   it("ignores stale preload completion from earlier navigation", async () => {
-    setEntryPoint("ce-stale-entry");
-
     const preloadResolvers: Array<() => void> = [];
+    const slowPageTag = define(function XSlowPage() {
+      return "<p>slow</p>";
+    });
+    const fastPageTag = define(function XFastPage() {
+      return "<p>fast</p>";
+    });
 
-    define(
-      function XSlowPage() {
-        return "<p>slow</p>";
-      },
-      {
-        route: "/slow",
-        preload: () =>
-          new Promise<void>((resolve) => {
-            preloadResolvers.push(resolve);
-          }),
-      }
-    );
-
-    define(
-      function XFastPage() {
-        return "<p>fast</p>";
-      },
-      { route: "/fast" }
-    );
+    config({
+      entryPoint: "ce-stale-entry",
+      routes: [
+        {
+          path: "/slow",
+          preload: () =>
+            new Promise<void>((resolve) => {
+              preloadResolvers.push(resolve);
+            }),
+          tag: slowPageTag,
+        },
+        {
+          path: "/fast",
+          tag: fastPageTag,
+        },
+      ],
+    });
 
     const slowNavigation = navigate("/slow");
     await wait();
@@ -397,22 +511,24 @@ describe("CE function component runtime", () => {
   });
 
   it("awaits hash navigation until async preload completes", async () => {
-    setEntryPoint("ce-hash-entry");
-
     let resolvePreload = () => {};
     const preloadPromise = new Promise<void>((resolve) => {
       resolvePreload = resolve;
     });
+    const hashAsyncPageTag = define(function XHashAsyncPage() {
+      return "<p>hash async</p>";
+    });
 
-    define(
-      function XHashAsyncPage() {
-        return "<p>hash async</p>";
-      },
-      {
-        route: "/hash-async",
-        preload: () => preloadPromise,
-      }
-    );
+    config({
+      entryPoint: "ce-hash-entry",
+      routes: [
+        {
+          path: "/hash-async",
+          preload: () => preloadPromise,
+          tag: hashAsyncPageTag,
+        },
+      ],
+    });
 
     const navigation = navigate("#/hash-async");
     await wait();

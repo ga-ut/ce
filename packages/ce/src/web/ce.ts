@@ -49,9 +49,7 @@ type FunctionDefineContext<P extends PropsDefinition | undefined> = {
 
 export type DefineOptions<P extends PropsDefinition | undefined = undefined> = {
   props?: P;
-  route?: string;
-  preload?: (path: string) => Promise<void>;
-  onError?: (error: unknown) => string;
+  styles?: StyleInput[];
 };
 
 export type RenderStaticOptions<P extends PropsDefinition | undefined = undefined> = {
@@ -59,6 +57,27 @@ export type RenderStaticOptions<P extends PropsDefinition | undefined = undefine
   tag?: string;
   attributes?: false | Record<string, unknown>;
   mode?: "declarative-shadow-dom" | "light-dom";
+};
+
+export type StyleInput = string | CSSStyleSheet;
+
+export type ConfigRoute = {
+  path: string;
+  tag: string;
+  preload?: (path: string) => Promise<void>;
+  onError?: (error: unknown) => string;
+};
+
+export type ConfigOptions = {
+  globalStyles?: StyleInput[];
+  entryPoint?:
+    | string
+    | {
+        selector: string;
+        rootElement?: HTMLElement;
+        hydrate?: boolean;
+      };
+  routes?: ConfigRoute[];
 };
 
 export type FunctionComponent<P extends PropsDefinition | undefined = undefined> = (
@@ -99,6 +118,16 @@ type HtmlRenderContext = {
   dependencies: Set<Signal<unknown>>;
   hasUnslottedDynamic: boolean;
   staticSnapshot: boolean;
+};
+
+type StyleEntry = {
+  sheet?: CSSStyleSheet;
+  text?: string;
+};
+
+type StyleRootRecord = {
+  root: ShadowRoot;
+  componentStyles: StyleEntry[];
 };
 
 let activeSignalCollector: Set<Signal<unknown>> | null = null;
@@ -428,6 +457,50 @@ const parsePropValue = (
   return definition(attributeValue);
 };
 
+const canAdoptStyleSheets = (root: ShadowRoot) =>
+  "adoptedStyleSheets" in root &&
+  typeof CSSStyleSheet !== "undefined" &&
+  typeof CSSStyleSheet.prototype.replaceSync === "function";
+
+const serializeStyleSheet = (sheet: CSSStyleSheet) => {
+  try {
+    return Array.from(sheet.cssRules)
+      .map((rule) => rule.cssText)
+      .join("\n");
+  } catch {
+    return "";
+  }
+};
+
+const createStyleEntry = (style: StyleInput): StyleEntry => {
+  if (typeof style !== "string") {
+    return {
+      sheet: style,
+      text: serializeStyleSheet(style),
+    };
+  }
+
+  if (
+    typeof CSSStyleSheet === "undefined" ||
+    typeof CSSStyleSheet.prototype.replaceSync !== "function"
+  ) {
+    return { text: style };
+  }
+
+  const sheet = new CSSStyleSheet();
+  sheet.replaceSync(style);
+  return {
+    sheet,
+    text: style,
+  };
+};
+
+const getStyleText = (entries: StyleEntry[]) =>
+  entries
+    .map((entry) => entry.text ?? (entry.sheet ? serializeStyleSheet(entry.sheet) : ""))
+    .filter(Boolean)
+    .join("\n");
+
 class Router {
   private entryElement: HTMLElement | null = null;
   private hydrate = true;
@@ -526,6 +599,10 @@ export class CE {
   static routes = new Map<string, RouteDefinition>();
   static definitions = new Map<string, ComponentDefinition<any>>();
   static router = new Router();
+  static globalStyleEntries: StyleEntry[] = [];
+  static configured = false;
+  private static styleCache = new Map<StyleInput, StyleEntry>();
+  private static styleRoots = new Set<StyleRootRecord>();
 
   static signal<T>(value: T): Signal<T> {
     return createSignal(value);
@@ -539,6 +616,83 @@ export class CE {
     return effect(callback);
   }
 
+  static config(options: ConfigOptions = {}) {
+    if (CE.configured) {
+      throw new Error("config() can only be called once.");
+    }
+
+    if (options.routes?.length && !options.entryPoint) {
+      throw new Error("config() requires entryPoint when routes are provided.");
+    }
+
+    CE.configured = true;
+
+    if (options.globalStyles) {
+      CE.globalStyleEntries = CE.normalizeStyles(options.globalStyles);
+      CE.applyStylesToRoots();
+    }
+
+    for (const route of options.routes ?? []) {
+      CE.router.registerRoute(route.path, {
+        component: route.tag,
+        preload: route.preload,
+        onError: route.onError,
+      });
+    }
+
+    if (options.entryPoint) {
+      if (typeof options.entryPoint === "string") {
+        CE.configureEntryPoint(options.entryPoint);
+      } else {
+        CE.configureEntryPoint(options.entryPoint.selector, {
+          rootElement: options.entryPoint.rootElement,
+          hydrate: options.entryPoint.hydrate,
+        });
+      }
+    }
+  }
+
+  private static normalizeStyles(styles: StyleInput[]) {
+    return styles.map((style) => {
+      const cached = CE.styleCache.get(style);
+      if (cached) return cached;
+
+      const entry = createStyleEntry(style);
+      CE.styleCache.set(style, entry);
+      return entry;
+    });
+  }
+
+  private static registerStyleRoot(root: ShadowRoot, componentStyles: StyleEntry[]) {
+    CE.styleRoots.add({ root, componentStyles });
+    CE.applyStyles(root, componentStyles);
+  }
+
+  private static applyStylesToRoots() {
+    for (const record of CE.styleRoots) {
+      CE.applyStyles(record.root, record.componentStyles);
+    }
+  }
+
+  private static applyStyles(root: ShadowRoot, componentStyles: StyleEntry[] = []) {
+    const entries = [...CE.globalStyleEntries, ...componentStyles];
+    if (entries.length === 0) return;
+
+    if (canAdoptStyleSheets(root)) {
+      const sheets = entries
+        .map((entry) => entry.sheet)
+        .filter((sheet): sheet is CSSStyleSheet => Boolean(sheet));
+      root.adoptedStyleSheets = sheets;
+      return;
+    }
+
+    const existing = root.querySelector<HTMLStyleElement>("style[data-ce-global-style]");
+    const styleElement = existing ?? document.createElement("style");
+    styleElement.dataset.ceGlobalStyle = "true";
+    styleElement.textContent = getStyleText(entries);
+    root.prepend(styleElement);
+  }
+
   static define<P extends PropsDefinition | undefined = undefined>(
     component: FunctionComponent<P>,
     options: DefineOptions<P> = {}
@@ -549,6 +703,7 @@ export class CE {
 
     const name = inferComponentName(component);
     const propDefinitions = options.props;
+    const componentStyleEntries = CE.normalizeStyles(options.styles ?? []);
 
     CE.definitions.set(name, {
       name,
@@ -556,23 +711,15 @@ export class CE {
       props: propDefinitions,
     });
 
-    if (options.route) {
-      CE.router.registerRoute(options.route, {
-        component: name,
-        preload: options.preload,
-        onError: options.onError,
-      });
-    }
-
     if (typeof customElements === "undefined" || customElements.get(name)) {
-      return;
+      return name;
     }
 
     class CEElement extends HTMLElement {
       private renderToken = 0;
       private inlineHandlers = new Map<
         HTMLElement,
-        { eventName: string; listener: EventListener }
+        Array<{ eventName: string; listener: EventListener }>
       >();
       private signalCleanups: Array<() => void> = [];
       private renderDependencyCleanups: Array<() => void> = [];
@@ -604,6 +751,9 @@ export class CE {
       constructor() {
         super();
         this.attachShadow({ mode: "open" });
+        if (this.shadowRoot) {
+          CE.registerStyleRoot(this.shadowRoot, componentStyleEntries);
+        }
       }
 
       static get observedAttributes() {
@@ -722,29 +872,64 @@ export class CE {
 
         this.cleanupInlineEventHandlers();
 
-        const targets =
-          this.shadowRoot.querySelectorAll<HTMLElement>("[data-ce-event]");
+        const targets = this.shadowRoot.querySelectorAll<HTMLElement>("*");
 
         for (const target of Array.from(targets)) {
-          const eventDescriptor = target.dataset.ceEvent;
-          if (!eventDescriptor) continue;
+          const descriptors = Array.from(target.attributes)
+            .map((attribute) => {
+              if (attribute.name === "data-ce-event") {
+                const [handlerIndex, eventName] = attribute.value.split(":");
+                return { handlerIndex: Number(handlerIndex), eventName };
+              }
 
-          const [handlerIndex, eventName] = eventDescriptor.split(":");
-          const handler = eventHandlers[Number(handlerIndex)];
-          if (!eventName || typeof handler !== "function") continue;
+              if (attribute.name.startsWith("data-ce-event-")) {
+                return {
+                  handlerIndex: Number(attribute.name.slice("data-ce-event-".length)),
+                  eventName: attribute.value,
+                };
+              }
 
-          const listener: EventListener = (event) => {
-            handler.call(this, event);
-          };
+              return null;
+            })
+            .filter(
+              (
+                descriptor
+              ): descriptor is { handlerIndex: number; eventName: string } =>
+                descriptor !== null &&
+                Number.isInteger(descriptor.handlerIndex) &&
+                Boolean(descriptor.eventName)
+            );
 
-          target.addEventListener(eventName, listener);
-          this.inlineHandlers.set(target, { eventName, listener });
+          if (descriptors.length === 0) continue;
+
+          const registeredHandlers: Array<{
+            eventName: string;
+            listener: EventListener;
+          }> = [];
+
+          for (const { handlerIndex, eventName } of descriptors) {
+            const handler = eventHandlers[handlerIndex];
+            if (typeof handler !== "function") continue;
+
+            const listener: EventListener = (event) => {
+              handler.call(this, event);
+            };
+
+            target.addEventListener(eventName, listener);
+            registeredHandlers.push({ eventName, listener });
+          }
+
+          if (registeredHandlers.length > 0) {
+            this.inlineHandlers.set(target, registeredHandlers);
+          }
         }
       }
 
       private cleanupInlineEventHandlers() {
-        for (const [target, handler] of this.inlineHandlers) {
-          target.removeEventListener(handler.eventName, handler.listener);
+        for (const [target, handlers] of this.inlineHandlers) {
+          for (const handler of handlers) {
+            target.removeEventListener(handler.eventName, handler.listener);
+          }
         }
 
         this.inlineHandlers.clear();
@@ -822,6 +1007,7 @@ export class CE {
       private setLoadingState() {
         if (!this.shadowRoot) return;
         this.shadowRoot.innerHTML = "<span>Loading...</span>";
+        CE.applyStyles(this.shadowRoot, componentStyleEntries);
       }
 
       private async renderComponent() {
@@ -840,8 +1026,10 @@ export class CE {
           if (token !== this.renderToken || !this.shadowRoot) return;
 
           this.shadowRoot.innerHTML = toHtmlString(resolved);
+          CE.applyStyles(this.shadowRoot, componentStyleEntries);
         } else if (this.shadowRoot) {
           this.shadowRoot.innerHTML = toHtmlString(content);
+          CE.applyStyles(this.shadowRoot, componentStyleEntries);
         }
 
         if (token !== this.renderToken) return;
@@ -906,9 +1094,10 @@ export class CE {
     }
 
     customElements.define(name, CEElement);
+    return name;
   }
 
-  static setEntryPoint(
+  private static configureEntryPoint(
     entryPoint: string,
     options?: { rootElement?: HTMLElement; hydrate?: boolean }
   ) {
@@ -986,10 +1175,10 @@ export class CE {
 }
 
 export const define = CE.define.bind(CE) as typeof CE.define;
+export const config = CE.config.bind(CE) as typeof CE.config;
 export const signal = CE.signal.bind(CE) as typeof CE.signal;
 export const derived = CE.derived.bind(CE) as typeof CE.derived;
 export const navigate = CE.navigate.bind(CE) as typeof CE.navigate;
-export const setEntryPoint = CE.setEntryPoint.bind(CE) as typeof CE.setEntryPoint;
 export const renderStatic = CE.renderStatic.bind(CE) as typeof CE.renderStatic;
 
 export function html(
@@ -1056,7 +1245,7 @@ const renderHtmlValue = (staticSegment: string, value: HtmlValue): string => {
 
     return (
       eventAttribute.staticPrefix +
-      `data-ce-event="${eventIndex}:${eventAttribute.eventName}"`
+      `data-ce-event-${eventIndex}="${eventAttribute.eventName}"`
     );
   }
 
