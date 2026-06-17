@@ -15,7 +15,8 @@
 8. `bun run pack:check` (`packages/ce` workspace `bun pm pack --dry-run`)
 
 ## Publish
-- Public package: `cd packages/ce && bun publish --access public`
+- Preferred path: run the `Publish npm package` GitHub workflow from the matching `vX.Y.Z` tag.
+- The workflow uses Bun for install, validation, build, and `bun publish --access public`.
 - Organization/private policy can override access mode.
 
 ## Release notes

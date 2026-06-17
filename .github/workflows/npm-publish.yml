@@ -55,5 +55,8 @@ jobs:
         run: bun run verify:full
 
       - name: Publish package
-        run: bun publish --access public
+        run: |
+          set -euo pipefail
+          export NPM_CONFIG_TOKEN="$NODE_AUTH_TOKEN"
+          bun publish --access public
         working-directory: packages/ce
