@@ -44,17 +44,17 @@
         &lt;h3 id=&quot;pre-publish-verification&quot;&gt;Pre-publish verification&lt;/h3&gt;
         &lt;ol&gt;
           &lt;li&gt;&lt;code&gt;bun install&lt;/code&gt;&lt;/li&gt;
-          &lt;li&gt;&lt;code&gt;npm run lint&lt;/code&gt;&lt;/li&gt;
-          &lt;li&gt;&lt;code&gt;npm run test&lt;/code&gt;&lt;/li&gt;
-          &lt;li&gt;&lt;code&gt;npm run build&lt;/code&gt;&lt;/li&gt;
-          &lt;li&gt;&lt;code&gt;npm run test:events&lt;/code&gt;&lt;/li&gt;
-          &lt;li&gt;&lt;code&gt;npm run docs:build&lt;/code&gt;&lt;/li&gt;
-          &lt;li&gt;&lt;code&gt;npm run docs:validate&lt;/code&gt;&lt;/li&gt;
-          &lt;li&gt;&lt;code&gt;npm run pack:check&lt;/code&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;code&gt;bun run lint&lt;/code&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;code&gt;bun run test&lt;/code&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;code&gt;bun run build&lt;/code&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;code&gt;bun run test:events&lt;/code&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;code&gt;bun run docs:build&lt;/code&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;code&gt;bun run docs:validate&lt;/code&gt;&lt;/li&gt;
+          &lt;li&gt;&lt;code&gt;bun run pack:check&lt;/code&gt;&lt;/li&gt;
         &lt;/ol&gt;
 
         &lt;h3 id=&quot;publish&quot;&gt;Publish&lt;/h3&gt;
-        &lt;p&gt;Publish from &lt;code&gt;packages/ce&lt;/code&gt; with &lt;code&gt;npm publish --access public&lt;/code&gt;. Organization policy can override access mode.&lt;/p&gt;
+        &lt;p&gt;Publish from &lt;code&gt;packages/ce&lt;/code&gt; with &lt;code&gt;bun publish --access public&lt;/code&gt;. Organization policy can override access mode.&lt;/p&gt;
 
         &lt;h3 id=&quot;release-notes&quot;&gt;Release notes&lt;/h3&gt;
         &lt;ul&gt;
@@ -65,7 +65,7 @@
 
         &lt;h4&gt;Initial publish checklist for v0.1.0&lt;/h4&gt;
         &lt;ol&gt;
-          &lt;li&gt;Confirm &lt;code&gt;npm view @ga-ut/ce version&lt;/code&gt; does not find an existing published package.&lt;/li&gt;
+          &lt;li&gt;Confirm &lt;code&gt;bun pm view @ga-ut/ce version&lt;/code&gt; does not find an existing published package.&lt;/li&gt;
           &lt;li&gt;Use named web-runtime imports such as &lt;code&gt;import { define, html, signal } from &quot;@ga-ut/ce/web&quot;;&lt;/code&gt;.&lt;/li&gt;
           &lt;li&gt;Confirm consumers do not use legacy object definitions.&lt;/li&gt;
           &lt;li&gt;Use &lt;code&gt;ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css&lt;/code&gt; when a CE app is built without an external bundler.&lt;/li&gt;
@@ -149,17 +149,17 @@
         <h3 id="pre-publish-verification">Pre-publish verification</h3>
         <ol>
           <li><code>bun install</code></li>
-          <li><code>npm run lint</code></li>
-          <li><code>npm run test</code></li>
-          <li><code>npm run build</code></li>
-          <li><code>npm run test:events</code></li>
-          <li><code>npm run docs:build</code></li>
-          <li><code>npm run docs:validate</code></li>
-          <li><code>npm run pack:check</code></li>
+          <li><code>bun run lint</code></li>
+          <li><code>bun run test</code></li>
+          <li><code>bun run build</code></li>
+          <li><code>bun run test:events</code></li>
+          <li><code>bun run docs:build</code></li>
+          <li><code>bun run docs:validate</code></li>
+          <li><code>bun run pack:check</code></li>
         </ol>
 
         <h3 id="publish">Publish</h3>
-        <p>Publish from <code>packages/ce</code> with <code>npm publish --access public</code>. Organization policy can override access mode.</p>
+        <p>Publish from <code>packages/ce</code> with <code>bun publish --access public</code>. Organization policy can override access mode.</p>
 
         <h3 id="release-notes">Release notes</h3>
         <ul>
@@ -170,7 +170,7 @@
 
         <h4>Initial publish checklist for v0.1.0</h4>
         <ol>
-          <li>Confirm <code>npm view @ga-ut/ce version</code> does not find an existing published package.</li>
+          <li>Confirm <code>bun pm view @ga-ut/ce version</code> does not find an existing published package.</li>
           <li>Use named web-runtime imports such as <code>import { define, html, signal } from "@ga-ut/ce/web";</code>.</li>
           <li>Confirm consumers do not use legacy object definitions.</li>
           <li>Use <code>ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css</code> when a CE app is built without an external bundler.</li>

@@ -5,13 +5,19 @@ Custom Elements runtime with function components, signals, scoped rendering, opt
 ## Install
 
 ```bash
-npm i @ga-ut/ce
+npm install @ga-ut/ce
+pnpm add @ga-ut/ce
+yarn add @ga-ut/ce
+bun add @ga-ut/ce
 ```
 
 You can also run the CLI without installing it globally:
 
 ```bash
 npx --package @ga-ut/ce ce-cli build --entry ./src/main.js --out ./dist
+pnpm dlx @ga-ut/ce ce-cli build --entry ./src/main.js --out ./dist
+yarn dlx @ga-ut/ce ce-cli build --entry ./src/main.js --out ./dist
+bunx -p @ga-ut/ce ce-cli build --entry ./src/main.js --out ./dist
 ```
 
 ## Runtime Usage
@@ -62,7 +68,7 @@ config({
 Generate `index.html` and `app.js`:
 
 ```bash
-npx --package @ga-ut/ce ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css
+ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css
 ```
 
 The build command bundles static relative imports, `@ga-ut/ce/web`, and optional `ce:styles` CSS into a browser ESM file. Use `--root` to choose the generated root custom element tag and `--title` to set the document title.
@@ -72,7 +78,7 @@ The build command bundles static relative imports, `@ga-ut/ce/web`, and optional
 Use `bundle` when you only want the browser ESM file:
 
 ```bash
-npx --package @ga-ut/ce ce-cli bundle --entry ./src/main.js --out ./dist/app.js --css ./src/ce.css
+ce-cli bundle --entry ./src/main.js --out ./dist/app.js --css ./src/ce.css
 ```
 
 Use the virtual `ce:styles` import to inject the CSS file as `globalStyles`:

@@ -1,7 +1,7 @@
 {
   "name": "ce-workspace",
   "private": true,
-  "packageManager": "bun@1.3.10",
+  "packageManager": "bun@1.3.14",
   "workspaces": [
     "packages/*",
     "apps/*"
@@ -14,10 +14,10 @@
     "preview:playground": "bun run --filter @ga-ut/ce-playground preview",
     "pack:check": "bun run --filter @ga-ut/ce pack:check",
     "test:events": "node --test tests/*.test.mjs",
-    "docs:build": "npm run build && node docs/site/build.mjs",
+    "docs:build": "bun run build && node docs/site/build.mjs",
     "docs:validate": "node scripts/validate-docs.mjs",
-    "verify": "npm run lint && npm test && npm run build",
-    "verify:full": "npm run verify && npm run test:events && npm run docs:validate && npm run pack:check"
+    "verify": "bun run lint && bun run test && bun run build",
+    "verify:full": "bun run verify && bun run test:events && bun run docs:validate && bun run pack:check"
   },
   "devDependencies": {
     "esbuild": "0.28.1",

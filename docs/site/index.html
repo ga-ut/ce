@@ -102,8 +102,11 @@ define(function UserCounter({ props, lifecycle }) {
 
       &lt;section class=&quot;docs-section&quot;&gt;
         &lt;h2 id=&quot;install-and-start&quot;&gt;Install and start&lt;/h2&gt;
-        &lt;p&gt;Install the runtime, import the web entrypoint, then call &lt;code&gt;config()&lt;/code&gt; once from the browser entry.&lt;/p&gt;
-        &lt;pre&gt;&lt;code&gt;npm i @ga-ut/ce&lt;/code&gt;&lt;/pre&gt;
+        &lt;p&gt;Install the runtime with your package manager, import the web entrypoint, then call &lt;code&gt;config()&lt;/code&gt; once from the browser entry.&lt;/p&gt;
+        &lt;pre&gt;&lt;code&gt;npm install @ga-ut/ce
+pnpm add @ga-ut/ce
+yarn add @ga-ut/ce
+bun add @ga-ut/ce&lt;/code&gt;&lt;/pre&gt;
         &lt;pre&gt;&lt;code&gt;import { config, define, html, signal } from &quot;@ga-ut/ce/web&quot;;
 import styles from &quot;./ce.css?inline&quot;;
 
@@ -152,19 +155,19 @@ config({
           &lt;li&gt;
             &lt;div&gt;
               &lt;h3 id=&quot;runtime-gate&quot;&gt;Runtime gate&lt;/h3&gt;
-              &lt;p&gt;&lt;code&gt;npm run lint &amp;amp;&amp;amp; npm test &amp;amp;&amp;amp; npm run build&lt;/code&gt; protects source, playground, and package output.&lt;/p&gt;
+              &lt;p&gt;&lt;code&gt;bun run lint &amp;amp;&amp;amp; bun run test &amp;amp;&amp;amp; bun run build&lt;/code&gt; protects source, playground, and package output.&lt;/p&gt;
             &lt;/div&gt;
           &lt;/li&gt;
           &lt;li&gt;
             &lt;div&gt;
               &lt;h3 id=&quot;event-gate&quot;&gt;Event gate&lt;/h3&gt;
-              &lt;p&gt;&lt;code&gt;npm run test:events&lt;/code&gt; covers custom event wiring, rerender handler stability, and docs page link policy.&lt;/p&gt;
+              &lt;p&gt;&lt;code&gt;bun run test:events&lt;/code&gt; covers custom event wiring, rerender handler stability, and docs page link policy.&lt;/p&gt;
             &lt;/div&gt;
           &lt;/li&gt;
           &lt;li&gt;
             &lt;div&gt;
               &lt;h3 id=&quot;docs-gate&quot;&gt;Docs gate&lt;/h3&gt;
-              &lt;p&gt;&lt;code&gt;npm run docs:validate&lt;/code&gt; checks JSON data, markdown links, and internal documentation integrity.&lt;/p&gt;
+              &lt;p&gt;&lt;code&gt;bun run docs:validate&lt;/code&gt; checks JSON data, markdown links, and internal documentation integrity.&lt;/p&gt;
             &lt;/div&gt;
           &lt;/li&gt;
         &lt;/ul&gt;
@@ -303,8 +306,11 @@ define(function UserCounter({ props, lifecycle }) {
 
       <section class="docs-section">
         <h2 id="install-and-start">Install and start</h2>
-        <p>Install the runtime, import the web entrypoint, then call <code>config()</code> once from the browser entry.</p>
-        <pre><code>npm i @ga-ut/ce</code></pre>
+        <p>Install the runtime with your package manager, import the web entrypoint, then call <code>config()</code> once from the browser entry.</p>
+        <pre><code>npm install @ga-ut/ce
+pnpm add @ga-ut/ce
+yarn add @ga-ut/ce
+bun add @ga-ut/ce</code></pre>
         <pre><code>import { config, define, html, signal } from "@ga-ut/ce/web";
 import styles from "./ce.css?inline";
 
@@ -353,19 +359,19 @@ config({
           <li>
             <div>
               <h3 id="runtime-gate">Runtime gate</h3>
-              <p><code>npm run lint &amp;&amp; npm test &amp;&amp; npm run build</code> protects source, playground, and package output.</p>
+              <p><code>bun run lint &amp;&amp; bun run test &amp;&amp; bun run build</code> protects source, playground, and package output.</p>
             </div>
           </li>
           <li>
             <div>
               <h3 id="event-gate">Event gate</h3>
-              <p><code>npm run test:events</code> covers custom event wiring, rerender handler stability, and docs page link policy.</p>
+              <p><code>bun run test:events</code> covers custom event wiring, rerender handler stability, and docs page link policy.</p>
             </div>
           </li>
           <li>
             <div>
               <h3 id="docs-gate">Docs gate</h3>
-              <p><code>npm run docs:validate</code> checks JSON data, markdown links, and internal documentation integrity.</p>
+              <p><code>bun run docs:validate</code> checks JSON data, markdown links, and internal documentation integrity.</p>
             </div>
           </li>
         </ul>

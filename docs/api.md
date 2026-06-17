@@ -238,7 +238,7 @@ config({
 Then generate an app shell and bundled browser module locally or in CI:
 
 ```sh
-npx --package @ga-ut/ce ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css
+ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css
 ```
 
 The command writes `dist/index.html` and `dist/app.js`.
@@ -247,7 +247,7 @@ Use `--root` to choose the generated root custom element tag and `--title` to
 set the document title:
 
 ```sh
-npx --package @ga-ut/ce ce-cli build \
+ce-cli build \
   --entry ./src/main.js \
   --out ./dist \
   --css ./src/ce.css \
@@ -261,7 +261,7 @@ Use `bundle` when you only want one browser ESM file without the generated HTML
 shell:
 
 ```sh
-npx --package @ga-ut/ce ce-cli bundle --entry ./src/main.js --out ./dist/app.js --css ./src/ce.css
+ce-cli bundle --entry ./src/main.js --out ./dist/app.js --css ./src/ce.css
 ```
 
 The bundle command supports static relative imports, `@ga-ut/ce/web`, and a

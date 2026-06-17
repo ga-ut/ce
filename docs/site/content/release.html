@@ -8,17 +8,17 @@
         <h3>Pre-publish verification</h3>
         <ol>
           <li><code>bun install</code></li>
-          <li><code>npm run lint</code></li>
-          <li><code>npm run test</code></li>
-          <li><code>npm run build</code></li>
-          <li><code>npm run test:events</code></li>
-          <li><code>npm run docs:build</code></li>
-          <li><code>npm run docs:validate</code></li>
-          <li><code>npm run pack:check</code></li>
+          <li><code>bun run lint</code></li>
+          <li><code>bun run test</code></li>
+          <li><code>bun run build</code></li>
+          <li><code>bun run test:events</code></li>
+          <li><code>bun run docs:build</code></li>
+          <li><code>bun run docs:validate</code></li>
+          <li><code>bun run pack:check</code></li>
         </ol>
 
         <h3>Publish</h3>
-        <p>Publish from <code>packages/ce</code> with <code>npm publish --access public</code>. Organization policy can override access mode.</p>
+        <p>Publish from <code>packages/ce</code> with <code>bun publish --access public</code>. Organization policy can override access mode.</p>
 
         <h3>Release notes</h3>
         <ul>
@@ -29,7 +29,7 @@
 
         <h4>Initial publish checklist for v0.1.0</h4>
         <ol>
-          <li>Confirm <code>npm view @ga-ut/ce version</code> does not find an existing published package.</li>
+          <li>Confirm <code>bun pm view @ga-ut/ce version</code> does not find an existing published package.</li>
           <li>Use named web-runtime imports such as <code>import { define, html, signal } from "@ga-ut/ce/web";</code>.</li>
           <li>Confirm consumers do not use legacy object definitions.</li>
           <li>Use <code>ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css</code> when a CE app is built without an external bundler.</li>

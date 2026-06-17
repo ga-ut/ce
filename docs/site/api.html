@@ -205,10 +205,10 @@ config({
   entryPoint: &quot;ce-app&quot;,
   routes: [{ path: &quot;/&quot;, tag: homePageTag }]
 });&lt;/code&gt;&lt;/pre&gt;
-        &lt;p&gt;Then generate an app shell and bundled browser module locally or in CI:&lt;/p&gt;
-        &lt;pre&gt;&lt;code&gt;npx --package @ga-ut/ce ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css&lt;/code&gt;&lt;/pre&gt;
+        &lt;p&gt;Then generate an app shell and bundled browser module locally or in CI from a package script:&lt;/p&gt;
+        &lt;pre&gt;&lt;code&gt;ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css&lt;/code&gt;&lt;/pre&gt;
         &lt;p&gt;The command writes &lt;code&gt;dist/index.html&lt;/code&gt; and &lt;code&gt;dist/app.js&lt;/code&gt;. Use &lt;code&gt;--root&lt;/code&gt; to choose the generated root custom element tag and &lt;code&gt;--title&lt;/code&gt; to set the document title.&lt;/p&gt;
-        &lt;pre&gt;&lt;code&gt;npx --package @ga-ut/ce ce-cli build \
+        &lt;pre&gt;&lt;code&gt;ce-cli build \
   --entry ./src/main.js \
   --out ./dist \
   --css ./src/ce.css \
@@ -217,7 +217,7 @@ config({
 
         &lt;h3 id=&quot;browser-bundle-cli&quot;&gt;Browser Bundle CLI&lt;/h3&gt;
         &lt;p&gt;Use &lt;code&gt;bundle&lt;/code&gt; when you only want one browser ESM file without the generated HTML shell:&lt;/p&gt;
-        &lt;pre&gt;&lt;code&gt;npx --package @ga-ut/ce ce-cli bundle --entry ./src/main.js --out ./dist/app.js --css ./src/ce.css&lt;/code&gt;&lt;/pre&gt;
+        &lt;pre&gt;&lt;code&gt;ce-cli bundle --entry ./src/main.js --out ./dist/app.js --css ./src/ce.css&lt;/code&gt;&lt;/pre&gt;
         &lt;p&gt;The bundle command supports static relative imports, &lt;code&gt;@ga-ut/ce/web&lt;/code&gt;, and a virtual &lt;code&gt;ce:styles&lt;/code&gt; import:&lt;/p&gt;
         &lt;pre&gt;&lt;code&gt;import { config } from &quot;@ga-ut/ce/web&quot;;
 import styles from &quot;ce:styles&quot;;
@@ -465,10 +465,10 @@ config({
   entryPoint: "ce-app",
   routes: [{ path: "/", tag: homePageTag }]
 });</code></pre>
-        <p>Then generate an app shell and bundled browser module locally or in CI:</p>
-        <pre><code>npx --package @ga-ut/ce ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css</code></pre>
+        <p>Then generate an app shell and bundled browser module locally or in CI from a package script:</p>
+        <pre><code>ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css</code></pre>
         <p>The command writes <code>dist/index.html</code> and <code>dist/app.js</code>. Use <code>--root</code> to choose the generated root custom element tag and <code>--title</code> to set the document title.</p>
-        <pre><code>npx --package @ga-ut/ce ce-cli build \
+        <pre><code>ce-cli build \
   --entry ./src/main.js \
   --out ./dist \
   --css ./src/ce.css \
@@ -477,7 +477,7 @@ config({
 
         <h3 id="browser-bundle-cli">Browser Bundle CLI</h3>
         <p>Use <code>bundle</code> when you only want one browser ESM file without the generated HTML shell:</p>
-        <pre><code>npx --package @ga-ut/ce ce-cli bundle --entry ./src/main.js --out ./dist/app.js --css ./src/ce.css</code></pre>
+        <pre><code>ce-cli bundle --entry ./src/main.js --out ./dist/app.js --css ./src/ce.css</code></pre>
         <p>The bundle command supports static relative imports, <code>@ga-ut/ce/web</code>, and a virtual <code>ce:styles</code> import:</p>
         <pre><code>import { config } from "@ga-ut/ce/web";
 import styles from "ce:styles";

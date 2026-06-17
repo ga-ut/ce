@@ -39,8 +39,11 @@
         &lt;p&gt;Use CE when a small custom element needs local state, scoped rendering, and direct event handling without a larger app framework.&lt;/p&gt;
 
         &lt;h3 id=&quot;install-the-web-runtime&quot;&gt;Install the web runtime&lt;/h3&gt;
-        &lt;p&gt;Install the package in the app that owns the custom elements.&lt;/p&gt;
-        &lt;pre&gt;&lt;code&gt;npm i @ga-ut/ce&lt;/code&gt;&lt;/pre&gt;
+        &lt;p&gt;Install the package in the app that owns the custom elements. CE works with npm, pnpm, Yarn, and Bun projects.&lt;/p&gt;
+        &lt;pre&gt;&lt;code&gt;npm install @ga-ut/ce
+pnpm add @ga-ut/ce
+yarn add @ga-ut/ce
+bun add @ga-ut/ce&lt;/code&gt;&lt;/pre&gt;
         &lt;p&gt;Browser-facing components import named helpers from the web entrypoint. The package root stays core-only.&lt;/p&gt;
         &lt;pre&gt;&lt;code&gt;import { config, define, html, signal, derived, match } from &quot;@ga-ut/ce/web&quot;;&lt;/code&gt;&lt;/pre&gt;
 
@@ -170,8 +173,11 @@ return html`
         <p>Use CE when a small custom element needs local state, scoped rendering, and direct event handling without a larger app framework.</p>
 
         <h3 id="install-the-web-runtime">Install the web runtime</h3>
-        <p>Install the package in the app that owns the custom elements.</p>
-        <pre><code>npm i @ga-ut/ce</code></pre>
+        <p>Install the package in the app that owns the custom elements. CE works with npm, pnpm, Yarn, and Bun projects.</p>
+        <pre><code>npm install @ga-ut/ce
+pnpm add @ga-ut/ce
+yarn add @ga-ut/ce
+bun add @ga-ut/ce</code></pre>
         <p>Browser-facing components import named helpers from the web entrypoint. The package root stays core-only.</p>
         <pre><code>import { config, define, html, signal, derived, match } from "@ga-ut/ce/web";</code></pre>
 

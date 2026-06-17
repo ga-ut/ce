@@ -11,6 +11,9 @@ CE is a small Custom Elements runtime with function components, signals, scoped 
 
 ## Setup
 
+This repository uses Bun for workspace development and validation. Apps that
+consume `@ga-ut/ce` can use any package manager.
+
 ```bash
 bun install
 ```
@@ -18,7 +21,10 @@ bun install
 ## Install In An App
 
 ```bash
-npm i @ga-ut/ce
+npm install @ga-ut/ce
+pnpm add @ga-ut/ce
+yarn add @ga-ut/ce
+bun add @ga-ut/ce
 ```
 
 Browser code should import from the web entrypoint:
@@ -72,22 +78,31 @@ config({
 });
 ```
 
-Build the app shell and browser module without installing a global CLI:
+Build the app shell and browser module from a package script:
 
 ```bash
-npx --package @ga-ut/ce ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css
+ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css
 ```
 
 The command writes `dist/index.html` and `dist/app.js`. The generated HTML contains a root custom element, and `app.js` contains the CE runtime, relative app modules, and optional `ce:styles` CSS text.
 
 Use `--root` to choose the generated root custom element tag and `--title` to set the document title.
 
+For one-off runs without adding a script, use your package manager's package runner:
+
+```bash
+npx --package @ga-ut/ce ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css
+pnpm dlx @ga-ut/ce ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css
+yarn dlx @ga-ut/ce ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css
+bunx -p @ga-ut/ce ce-cli build --entry ./src/main.js --out ./dist --css ./src/ce.css
+```
+
 ## Browser Bundle CLI
 
 Use `bundle` when you only want the browser module:
 
 ```bash
-npx --package @ga-ut/ce ce-cli bundle --entry ./src/main.js --out ./dist/app.js --css ./src/ce.css
+ce-cli bundle --entry ./src/main.js --out ./dist/app.js --css ./src/ce.css
 ```
 
 The bundle command supports static relative imports, `@ga-ut/ce/web`, and a
@@ -110,13 +125,13 @@ config({
 The local docs site is generated through a repository-local build script:
 
 ```bash
-npm run docs:build
+bun run docs:build
 ```
 
 That command runs:
 
 ```bash
-npm run build
+bun run build
 node docs/site/build.mjs
 ```
 
@@ -147,10 +162,10 @@ Default URL: `http://127.0.0.1:4173`
 
 ## Quality Gates
 
-- Source/runtime changes: `npm run lint && npm test && npm run build`
-- Runtime event behavior: also run `npm run test:events`
-- Docs and docs tooling: `npm run docs:validate`
-- Package entry metadata: `npm run build && npm run pack:check`
+- Source/runtime changes: `bun run lint && bun run test && bun run build`
+- Runtime event behavior: also run `bun run test:events`
+- Docs and docs tooling: `bun run docs:validate`
+- Package entry metadata: `bun run build && bun run pack:check`
 
 ## Release Notes
 

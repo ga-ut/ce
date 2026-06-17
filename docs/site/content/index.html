@@ -66,8 +66,11 @@ define(function UserCounter({ props, lifecycle }) {
 
       <section class="docs-section">
         <h2>Install and start</h2>
-        <p>Install the runtime, import the web entrypoint, then call <code>config()</code> once from the browser entry.</p>
-        <pre><code>npm i @ga-ut/ce</code></pre>
+        <p>Install the runtime with your package manager, import the web entrypoint, then call <code>config()</code> once from the browser entry.</p>
+        <pre><code>npm install @ga-ut/ce
+pnpm add @ga-ut/ce
+yarn add @ga-ut/ce
+bun add @ga-ut/ce</code></pre>
         <pre><code>import { config, define, html, signal } from "@ga-ut/ce/web";
 import styles from "./ce.css?inline";
 
@@ -116,19 +119,19 @@ config({
           <li>
             <div>
               <h3>Runtime gate</h3>
-              <p><code>npm run lint &amp;&amp; npm test &amp;&amp; npm run build</code> protects source, playground, and package output.</p>
+              <p><code>bun run lint &amp;&amp; bun run test &amp;&amp; bun run build</code> protects source, playground, and package output.</p>
             </div>
           </li>
           <li>
             <div>
               <h3>Event gate</h3>
-              <p><code>npm run test:events</code> covers custom event wiring, rerender handler stability, and docs page link policy.</p>
+              <p><code>bun run test:events</code> covers custom event wiring, rerender handler stability, and docs page link policy.</p>
             </div>
           </li>
           <li>
             <div>
               <h3>Docs gate</h3>
-              <p><code>npm run docs:validate</code> checks JSON data, markdown links, and internal documentation integrity.</p>
+              <p><code>bun run docs:validate</code> checks JSON data, markdown links, and internal documentation integrity.</p>
             </div>
           </li>
         </ul>
