@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@ga-ut/ce/web": ["../ce/src/web/index.ts"]
+    }
+  },
+  "include": ["src"]
+}

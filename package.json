@@ -7,12 +7,13 @@
     "apps/*"
   ],
   "scripts": {
-    "lint": "tsc --noEmit -p packages/ce/tsconfig.json && tsc --noEmit -p apps/playground/tsconfig.json && tsc --noEmit -p tsconfig.json",
+    "lint": "tsc --noEmit -p packages/ce/tsconfig.json && tsc --noEmit -p packages/ui/tsconfig.json && tsc --noEmit -p apps/playground/tsconfig.json && tsc --noEmit -p apps/ui-showcase/tsconfig.json && tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "build": "bun run --filter @ga-ut/ce build && bun run build:compat && bun run --filter @ga-ut/ce-playground build",
+    "build": "bun run --filter @ga-ut/ce build && bun run --filter @ga-ut/ui build && bun run build:compat && bun run --filter @ga-ut/ce-playground build && bun run --filter @ga-ut/ui-showcase build",
     "build:compat": "rm -rf dist && mkdir -p dist && cp -R packages/ce/dist/. dist/",
     "preview:playground": "bun run --filter @ga-ut/ce-playground preview",
-    "pack:check": "bun run --filter @ga-ut/ce pack:check",
+    "preview:ui": "bun run --filter @ga-ut/ui-showcase preview",
+    "pack:check": "bun run --filter @ga-ut/ce pack:check && bun run --filter @ga-ut/ui pack:check",
     "test:events": "node --test tests/*.test.mjs",
     "docs:build": "bun run build && node docs/site/build.mjs",
     "docs:validate": "node scripts/validate-docs.mjs",

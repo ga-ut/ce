@@ -14,9 +14,11 @@ on:
       - docs/site/**
       - docs/data/**
       - apps/playground/**
+      - apps/ui-showcase/**
       - packages/ce/src/**
       - packages/ce/package.json
       - packages/ce/tsconfig.json
+      - packages/ui/**
   workflow_dispatch:
 
 permissions:
@@ -54,7 +56,7 @@ jobs:
       - name: Generate docs site
         run: bun run docs:build
 
-      - name: Prepare Pages artifact (docs/site/* + docs/data + dist)
+      - name: Prepare Pages artifact (docs/site/* + docs/data + dist + UI showcase)
         run: |
           set -euo pipefail
           mkdir -p _pages_artifact
@@ -77,6 +79,15 @@ jobs:
             echo "dist not found; skipping copy"
           fi
 
+          if [[ -f apps/ui-showcase/index.html && -f apps/ui-showcase/dist/app.js ]]; then
+            mkdir -p _pages_artifact/ui/dist
+            cp apps/ui-showcase/index.html _pages_artifact/ui/index.html
+            cp -a apps/ui-showcase/dist/. _pages_artifact/ui/dist/
+          else
+            echo "apps/ui-showcase build output not found; cannot publish /ui"
+            exit 1
+          fi
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
@@ -85,7 +96,7 @@ jobs:
       - name: Deployment failure guidance
         if: failure()
         run: |
-          echo "[Ops] If deployment fails, check docs/site and docs/data path configuration first."
+          echo "[Ops] If deployment fails, check docs/site, docs/data, and apps/ui-showcase/dist first."
 
   deploy:
     needs: build
@@ -132,4 +143,4 @@ jobs:
         if: failure()
         run: |
           echo "[Ops] First check that Settings > Pages is enabled and Source is set to GitHub Actions."
-          echo "[Ops] Then check docs/site and docs/data path configuration."
+          echo "[Ops] Then check docs/site, docs/data, and apps/ui-showcase/dist path configuration."
