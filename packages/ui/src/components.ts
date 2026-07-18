@@ -352,7 +352,8 @@ export const gaSwitchTag = define(
 const gaTextFieldStyles = `
 :host {
   display: inline-block;
-  min-width: 15rem;
+  width: 15rem;
+  max-width: 100%;
   vertical-align: middle;
 }
 
@@ -717,8 +718,8 @@ export const gaFeedbackTag = define(
     observeAttributes(host, lifecycle, ["tone", "title", "dismiss"], () => sync());
     const dismissFeedback = (event: Event) => {
       event.stopPropagation();
-      dispatchGaEvent(host, "ga-dismiss", {});
-      host.setAttribute("hidden", "");
+      const shouldDismiss = dispatchGaEvent(host, "ga-dismiss", {}, { cancelable: true });
+      if (shouldDismiss) host.setAttribute("hidden", "");
     };
 
     return html`
@@ -802,6 +803,31 @@ const gaTabStyles = `
 
 export const gaTabTag = define(
   function GaTab({ props, host, lifecycle }) {
+    const syncTabStops = (current: { selected: boolean; disabled: boolean }) => {
+      const tablist = host.closest<HTMLElement>('[role~="tablist"]');
+      if (!tablist) {
+        const control = host.shadowRoot?.querySelector<HTMLButtonElement>("button");
+        if (control) control.tabIndex = current.disabled ? -1 : 0;
+        return;
+      }
+
+      const tabs = Array.from(tablist.querySelectorAll<HTMLElement>("ga-tab")).filter(
+        (element) => element.closest('[role~="tablist"]') === tablist
+      );
+      const isDisabled = (element: HTMLElement) =>
+        element === host ? current.disabled : element.hasAttribute("disabled");
+      const isSelected = (element: HTMLElement) =>
+        element === host ? current.selected : element.hasAttribute("selected");
+      const activeTab =
+        tabs.find((element) => !isDisabled(element) && isSelected(element)) ??
+        tabs.find((element) => !isDisabled(element));
+
+      for (const element of tabs) {
+        const control = element.shadowRoot?.querySelector<HTMLButtonElement>("button");
+        if (control) control.tabIndex = element === activeTab ? 0 : -1;
+      }
+    };
+
     const sync = (selected?: boolean, disabled?: boolean) => {
       const tab = host.shadowRoot?.querySelector<HTMLButtonElement>("button");
       if (!tab) return;
@@ -811,11 +837,46 @@ export const gaTabTag = define(
       tab.dataset.selected = String(isSelected);
       tab.setAttribute("aria-selected", String(isSelected));
       tab.disabled = isDisabled;
-      tab.tabIndex = isDisabled ? -1 : 0;
+      syncTabStops({ selected: isSelected, disabled: isDisabled });
     };
 
     effect(() => sync(props.selected, props.disabled));
     observeAttributes(host, lifecycle, ["selected", "disabled"], () => sync());
+    listenInShadow(host, lifecycle, "keydown", (event) => {
+      const keyboardEvent = event as KeyboardEvent;
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(keyboardEvent.key)) return;
+
+      const tablist = host.closest<HTMLElement>('[role~="tablist"]');
+      const roles = tablist?.getAttribute("role")?.trim().split(/\s+/) ?? [];
+      if (!tablist || !roles.includes("tablist")) return;
+
+      const enabledTabs = Array.from(tablist.querySelectorAll("ga-tab")).filter(
+        (element): element is HTMLElement =>
+          element.closest('[role~="tablist"]') === tablist &&
+          !element.hasAttribute("disabled")
+      );
+      const currentIndex = enabledTabs.indexOf(host);
+      if (currentIndex < 0 || enabledTabs.length === 0) return;
+
+      let nextIndex = currentIndex;
+      if (keyboardEvent.key === "Home") nextIndex = 0;
+      if (keyboardEvent.key === "End") nextIndex = enabledTabs.length - 1;
+      if (keyboardEvent.key === "ArrowLeft") {
+        nextIndex = (currentIndex - 1 + enabledTabs.length) % enabledTabs.length;
+      }
+      if (keyboardEvent.key === "ArrowRight") {
+        nextIndex = (currentIndex + 1) % enabledTabs.length;
+      }
+
+      const nextControl = enabledTabs[nextIndex]?.shadowRoot?.querySelector<HTMLButtonElement>(
+        'button[part="tab"]'
+      );
+      if (!nextControl) return;
+
+      keyboardEvent.preventDefault();
+      nextControl.focus();
+      nextControl.click();
+    });
 
     return `
       <button part="tab" class="tab" type="button" role="tab" aria-selected="false" data-selected="false">

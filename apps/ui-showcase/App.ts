@@ -79,6 +79,8 @@ function GaUtShowcase({ host }: { host: HTMLElement }) {
   const inspectorSwitch = signal(true);
   const inspectorFilter = signal("all");
   const inspectorChoice = signal("option-a");
+  const inspectorToastVisible = signal(true);
+  const dismissedFeedback = signal<string[]>([]);
   const toast = signal("");
   let nextTaskId = 2;
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
@@ -95,6 +97,22 @@ function GaUtShowcase({ host }: { host: HTMLElement }) {
     host.shadowRoot
       ?.querySelector(`#${sectionId}`)
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handleUtility = (label: string) => {
+    if (label === "토큰 가이드") {
+      scrollToSection("foundations");
+      showToast("GA-UT의 색상, 타이포그래피, 공간 토큰으로 이동했습니다.");
+      return;
+    }
+
+    if (label === "아이콘") {
+      scrollToSection("patterns");
+      showToast("아이콘을 포함한 조합 패턴으로 이동했습니다.");
+      return;
+    }
+
+    showToast("v0.1 · Foundations, Components, Patterns를 처음 공개했습니다.");
   };
 
   const copyTokens = async () => {
@@ -133,6 +151,12 @@ function GaUtShowcase({ host }: { host: HTMLElement }) {
     );
   };
 
+  const dismissFeedback = (tone: string) => {
+    dismissedFeedback.update((current) =>
+      current.includes(tone) ? current : [...current, tone]
+    );
+  };
+
   const selectComponent = (component: string) => {
     selectedComponent.set(component);
     inspectorTab.set("preview");
@@ -153,8 +177,8 @@ function GaUtShowcase({ host }: { host: HTMLElement }) {
     const selected = selectedComponent();
     const selectedExample = componentExamples[selected] ?? componentExamples.switch;
     const taskList = tasks();
+    const hiddenFeedback = dismissedFeedback();
     const darkClass = isDark() ? "ga-dark" : "";
-    const menuClass = menuOpen() ? "is-open" : "";
     const marketingSwitch = marketing()
       ? html`<ga-switch checked onclick=${() => marketing.set(false)}>활성</ga-switch>`
       : html`<ga-switch onclick=${() => marketing.set(true)}>비활성</ga-switch>`;
@@ -215,7 +239,7 @@ function GaUtShowcase({ host }: { host: HTMLElement }) {
           <nav class="side-nav utility-nav" aria-label="리소스">
             ${utilityItems.map(
               (item) => html`
-                <button type="button" class="side-nav-item" onclick=${() => showToast(`${item.label}를 준비하고 있습니다.`)}>
+                <button type="button" class="side-nav-item" onclick=${() => handleUtility(item.label)}>
                   ${icon(item.icon)}<span>${item.label}</span>
                 </button>
               `
@@ -230,8 +254,8 @@ function GaUtShowcase({ host }: { host: HTMLElement }) {
                 <button class="${isDark() ? "is-active" : ""}" type="button" aria-label="어두운 테마" onclick=${() => isDark.set(true)}>${icon("moon")}</button>
               </div>
             </div>
-            <div class="meta-row language-row"><span>언어</span><button type="button">한국어 ${icon("chevron")}</button></div>
-            <div class="company-row"><strong>GA-UT</strong><span>제품 엔지니어링 팀</span>${icon("chevron")}</div>
+            <div class="meta-row language-row"><span>언어</span><button type="button" aria-label="현재 언어: 한국어" onclick=${() => showToast("GA-UT UI는 한국어를 기본 언어로 사용합니다.")}>한국어 ${icon("chevron")}</button></div>
+            <button class="company-row" type="button" onclick=${() => showToast("GA-UT 제품 엔지니어링 팀의 내부 UI 시스템입니다.")}><strong>GA-UT</strong><span>제품 엔지니어링 팀</span>${icon("chevron")}</button>
           </div>
         </aside>
 
@@ -245,17 +269,17 @@ function GaUtShowcase({ host }: { host: HTMLElement }) {
             <button type="button" onclick=${() => scrollToSection("patterns")}>Patterns</button>
           </nav>
           <div class="top-actions">
-            <button class="version-button" type="button" aria-label="버전 선택">v0.1 ${icon("chevron")}</button>
+            <button class="version-button" type="button" aria-label="현재 버전 v0.1" onclick=${() => handleUtility("변경 로그")}>v0.1 ${icon("chevron")}</button>
             <button class="icon-button desktop-only" type="button" aria-label="토큰 복사" onclick=${copyTokens}>${icon("copy")}</button>
             <button class="icon-button" type="button" aria-label="테마 변경" onclick=${() => isDark.update((value) => !value)}>${icon(isDark() ? "moon" : "sun")}</button>
             <button class="icon-button menu-button" type="button" aria-label="메뉴 열기" aria-expanded="${menuOpen()}" onclick=${() => menuOpen.update((value) => !value)}>${icon(menuOpen() ? "close" : "menu")}</button>
           </div>
         </header>
 
-        <div class="${`mobile-menu ${menuClass}`}">
+        <div class="${`mobile-menu ${menuOpen() ? "is-open" : ""}`}" aria-hidden="${!menuOpen()}">
           <nav aria-label="모바일 탐색">
             ${navItems.map(
-              (item) => html`<button type="button" onclick=${() => scrollToSection(item.id)}>${icon(item.icon)}<span>${item.label}</span></button>`
+              (item) => html`<button type="button" tabindex="${menuOpen() ? 0 : -1}" onclick=${() => scrollToSection(item.id)}>${icon(item.icon)}<span>${item.label}</span></button>`
             )}
           </nav>
           <button class="mobile-copy" type="button" onclick=${copyTokens}>${icon("copy")} 토큰 복사</button>
@@ -265,7 +289,7 @@ function GaUtShowcase({ host }: { host: HTMLElement }) {
           <div class="primary-content">
             <section class="hero" id="intro">
               <div class="hero-copy">
-                <h1>하나의 언어로,<br />모든 제품을.</h1>
+                <h1><span>하나의 언어로,</span><br />모든 제품을.</h1>
                 <p>CE 위에 세운 GA-UT의 인터페이스 시스템.<br />빠르게 조합하고, 오래 일관되게.</p>
                 <div class="hero-actions">
                   <ga-button variant="primary" size="lg" onclick=${() => scrollToSection("components")}>컴포넌트 보기 ${icon("arrow")}</ga-button>
@@ -276,7 +300,7 @@ function GaUtShowcase({ host }: { host: HTMLElement }) {
               <article class="today-panel" aria-labelledby="today-title">
                 <div class="panel-heading">
                   <h2 id="today-title">Today</h2>
-                  <div><button class="add-button" type="button" onclick=${addTask}>${icon("plus")} 추가</button><button class="more-button" type="button" aria-label="더 보기">${icon("more")}</button></div>
+                  <div><button class="add-button" type="button" onclick=${addTask}>${icon("plus")} 추가</button><button class="more-button" type="button" aria-label="Today 패턴 설명" onclick=${() => showToast("할 일, 상태, 피드백을 한 흐름으로 묶은 GA-UT 작업 패턴입니다.")}>${icon("more")}</button></div>
                 </div>
                 <div class="task-body">
                   <span class="today-label">오늘</span>
@@ -287,7 +311,7 @@ function GaUtShowcase({ host }: { host: HTMLElement }) {
                           <button class="task-check" type="button" aria-label="${task.done ? "완료 취소" : "완료"}" onclick=${() => toggleTask(task.id)}>${task.done ? icon("check") : ""}</button>
                           <span class="task-title">${task.title}</span>
                           <ga-badge tone="success">${task.done ? "완료" : "활성"}</ga-badge>
-                          <button class="more-button" type="button" aria-label="할 일 메뉴">${icon("more")}</button>
+                          <button class="more-button" type="button" aria-label="${`${task.title} 설명`}" onclick=${() => showToast(`${task.title} · 상태 변경과 후속 동작을 제품 맥락에 맞게 연결합니다.`)}>${icon("more")}</button>
                         </div>
                       `
                     )}
@@ -344,41 +368,68 @@ function GaUtShowcase({ host }: { host: HTMLElement }) {
 
                 <article class="component-card feedback-card">
                   <h2>Feedback</h2>
-                  <ga-feedback tone="success" title="활성" dismiss>작업이 성공적으로 완료되었습니다.</ga-feedback>
-                  <ga-feedback tone="warning" title="검토 필요" dismiss>추가 확인이 필요한 항목이 있습니다.</ga-feedback>
-                  <ga-feedback tone="danger" title="제품 업데이트" dismiss>새 버전이 배포되었습니다.</ga-feedback>
+                  ${hiddenFeedback.includes("success") ? "" : html`<ga-feedback tone="success" title="활성" dismiss onga-dismiss=${() => dismissFeedback("success")}>작업이 성공적으로 완료되었습니다.</ga-feedback>`}
+                  ${hiddenFeedback.includes("warning") ? "" : html`<ga-feedback tone="warning" title="검토 필요" dismiss onga-dismiss=${() => dismissFeedback("warning")}>추가 확인이 필요한 항목이 있습니다.</ga-feedback>`}
+                  ${hiddenFeedback.includes("danger") ? "" : html`<ga-feedback tone="danger" title="제품 업데이트" dismiss onga-dismiss=${() => dismissFeedback("danger")}>새 버전이 배포되었습니다.</ga-feedback>`}
+                  ${hiddenFeedback.length ? html`<button class="restore-feedback" type="button" onclick=${() => dismissedFeedback.set([])}>알림 복원</button>` : ""}
                   <button class="text-link" type="button" onclick=${() => selectComponent("feedback")}>모든 피드백 컴포넌트 보기 ${icon("arrow")}</button>
                 </article>
               </div>
             </section>
 
-            <section class="patterns-anchor" id="patterns" aria-label="Patterns"></section>
+            <section class="library-section patterns-section" id="patterns">
+              <div class="section-title"><span>PATTERNS</span><i></i></div>
+              <div class="pattern-list">
+                <article>
+                  <span>01 · FLOW</span>
+                  <h2>행동에서 피드백까지</h2>
+                  <p>명확한 명령, 즉시 보이는 상태, 다음 행동을 알려주는 피드백을 한 흐름으로 연결합니다.</p>
+                  <code>action → state → feedback</code>
+                </article>
+                <article>
+                  <span>02 · COMPOSITION</span>
+                  <h2>작게 조합하고 크게 확장</h2>
+                  <p>CE 컴포넌트의 독립성을 유지하면서 제품 화면에서는 같은 토큰과 간격으로 조합합니다.</p>
+                  <code>primitive → pattern → product</code>
+                </article>
+                <article>
+                  <span>03 · ACCESS</span>
+                  <h2>키보드와 상태를 기본값으로</h2>
+                  <p>포커스, 비활성, 오류, 완료 상태를 시각 표현과 의미 구조에 함께 담습니다.</p>
+                  <code>focus · disabled · status</code>
+                </article>
+              </div>
+            </section>
           </div>
 
           <aside class="inspector" aria-label="컴포넌트 미리보기">
-            <div class="inspector-tabs">
+            <div class="inspector-tabs" role="tablist" aria-label="Inspector 보기">
               <span class="inspector-mobile-label">COMPONENTS</span>
               ${renderTab("미리보기", "preview", inspectorTab(), () => inspectorTab.set("preview"))}
               ${renderTab("코드", "code", inspectorTab(), () => inspectorTab.set("code"))}
             </div>
             ${inspectorTab() === "preview"
               ? html`
-                  <div class="inspector-content">
+                  <div class="inspector-content" role="tabpanel" aria-label="컴포넌트 미리보기">
                     <div class="inspector-group"><strong>스위치</strong><div class="inline-preview"><span>활성</span>${previewSwitch}</div></div>
-                    <div class="inspector-group"><strong>탭</strong><div class="tab-preview">${renderTab("전체", "all", inspectorFilter(), () => inspectorFilter.set("all"))}${renderTab("활성", "active", inspectorFilter(), () => inspectorFilter.set("active"))}${renderTab("보관됨", "archived", inspectorFilter(), () => inspectorFilter.set("archived"))}</div></div>
+                    <div class="inspector-group"><strong>탭</strong><div class="tab-preview" role="tablist" aria-label="작업 상태">${renderTab("전체", "all", inspectorFilter(), () => inspectorFilter.set("all"))}${renderTab("활성", "active", inspectorFilter(), () => inspectorFilter.set("active"))}${renderTab("보관됨", "archived", inspectorFilter(), () => inspectorFilter.set("archived"))}</div></div>
                     <div class="inspector-group"><strong>선택</strong><label class="select-wrap"><select onchange=${(event: Event) => showToast(`${(event.target as HTMLSelectElement).value} 선택됨`)}><option>옵션 선택</option><option>팀 워크스페이스</option><option>개인 워크스페이스</option></select>${icon("chevron")}</label></div>
                     <div class="inspector-group"><strong>토큰 그룹</strong><div class="segmented"><button class="${inspectorChoice() === "option-a" ? "is-active" : ""}" type="button" onclick=${() => inspectorChoice.set("option-a")}>옵션 A</button><button class="${inspectorChoice() === "option-b" ? "is-active" : ""}" type="button" onclick=${() => inspectorChoice.set("option-b")}>옵션 B</button><button class="${inspectorChoice() === "option-c" ? "is-active" : ""}" type="button" onclick=${() => inspectorChoice.set("option-c")}>옵션 C</button></div></div>
-                    <div class="inspector-group toast-preview"><strong>토스트</strong><div class="inline-toast">${icon("check")}<span>토큰이 클립보드에 복사되었습니다.</span><button type="button" aria-label="닫기">${icon("close")}</button></div></div>
+                    <div class="inspector-group toast-preview"><strong>토스트</strong>${inspectorToastVisible()
+                      ? html`<div class="inline-toast">${icon("check")}<span>토큰이 클립보드에 복사되었습니다.</span><button type="button" aria-label="미리보기 토스트 닫기" onclick=${() => inspectorToastVisible.set(false)}>${icon("close")}</button></div>`
+                      : html`<button class="restore-toast" type="button" onclick=${() => inspectorToastVisible.set(true)}>토스트 다시 보기</button>`}</div>
                     <p class="selection-note">선택됨 · ${selected}</p>
                   </div>
                 `
               : html`
-                  <div class="code-panel"><span>선택한 컴포넌트</span><strong>&lt;${selectedExample.tag}&gt;</strong><pre><code>${selectedExample.display}</code></pre><button type="button" onclick=${copyComponentCode}>${icon("copy")} 코드 복사</button></div>
+                  <div class="code-panel" role="tabpanel" aria-label="컴포넌트 코드"><span>선택한 컴포넌트</span><strong>&lt;${selectedExample.tag}&gt;</strong><pre><code>${selectedExample.display}</code></pre><button type="button" onclick=${copyComponentCode}>${icon("copy")} 코드 복사</button></div>
                 `}
           </aside>
         </main>
 
-        <div class="${`live-toast ${activeToast ? "is-visible" : ""}`}" role="status" aria-live="polite">${icon("check")}<span>${activeToast}</span><button type="button" aria-label="닫기" onclick=${() => toast.set("")}>${icon("close")}</button></div>
+        ${activeToast
+          ? html`<div class="live-toast is-visible" role="status" aria-live="polite">${icon("check")}<span>${activeToast}</span><button type="button" aria-label="알림 닫기" onclick=${() => toast.set("")}>${icon("close")}</button></div>`
+          : ""}
       </div>
     `;
   };

@@ -122,6 +122,107 @@ describe("@ga-ut/ui", () => {
     await flush();
 
     expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(onDismiss.mock.calls[0]?.[0]).toMatchObject({ cancelable: true });
     expect(element.hasAttribute("hidden")).toBe(true);
+  });
+
+  it("keeps feedback visible when ga-dismiss is prevented", async () => {
+    const element = document.createElement("ga-feedback") as HTMLElement;
+    element.setAttribute("dismiss", "");
+    element.addEventListener("ga-dismiss", (event) => event.preventDefault());
+    document.body.append(element);
+    await flush();
+
+    const dismiss = element.shadowRoot?.querySelector<HTMLButtonElement>(
+      'button[part="dismiss"]'
+    );
+    dismiss?.click();
+    await flush();
+
+    expect(element.hasAttribute("hidden")).toBe(false);
+  });
+
+  it("uses selected state for a tablist's roving tabindex", async () => {
+    const tablist = document.createElement("div");
+    tablist.setAttribute("role", "tablist");
+    const selected = document.createElement("ga-tab") as HTMLElement;
+    const unselected = document.createElement("ga-tab") as HTMLElement;
+    const disabled = document.createElement("ga-tab") as HTMLElement;
+    selected.setAttribute("selected", "");
+    disabled.setAttribute("disabled", "");
+    tablist.append(selected, unselected, disabled);
+    document.body.append(tablist);
+    await flush();
+
+    const selectedControl = selected.shadowRoot?.querySelector<HTMLButtonElement>(
+      'button[part="tab"]'
+    );
+    const unselectedControl = unselected.shadowRoot?.querySelector<HTMLButtonElement>(
+      'button[part="tab"]'
+    );
+    const disabledControl = disabled.shadowRoot?.querySelector<HTMLButtonElement>(
+      'button[part="tab"]'
+    );
+
+    expect(selectedControl?.tabIndex).toBe(0);
+    expect(unselectedControl?.tabIndex).toBe(-1);
+    expect(disabledControl?.tabIndex).toBe(-1);
+  });
+
+  it("keeps a tablist keyboard-reachable without an explicit selection", async () => {
+    const tablist = document.createElement("div");
+    tablist.setAttribute("role", "tablist");
+    const first = document.createElement("ga-tab") as HTMLElement;
+    const second = document.createElement("ga-tab") as HTMLElement;
+    tablist.append(first, second);
+    document.body.append(tablist);
+    await flush();
+
+    const firstControl = first.shadowRoot?.querySelector<HTMLButtonElement>(
+      'button[part="tab"]'
+    );
+    const secondControl = second.shadowRoot?.querySelector<HTMLButtonElement>(
+      'button[part="tab"]'
+    );
+
+    expect(firstControl?.tabIndex).toBe(0);
+    expect(secondControl?.tabIndex).toBe(-1);
+  });
+
+  it.each([
+    ["ArrowRight", 0, 2],
+    ["ArrowLeft", 0, 2],
+    ["Home", 2, 0],
+    ["End", 0, 2],
+  ])("moves tab focus with %s and skips disabled tabs", async (key, startIndex, targetIndex) => {
+    const tablist = document.createElement("div");
+    tablist.setAttribute("role", "tablist");
+    const tabs = Array.from({ length: 3 }, () => document.createElement("ga-tab") as HTMLElement);
+    tabs[1]?.setAttribute("disabled", "");
+    const wrappers = tabs.map((tab) => {
+      const wrapper = document.createElement("span");
+      wrapper.append(tab);
+      return wrapper;
+    });
+    tablist.append(...wrappers);
+    document.body.append(tablist);
+    await flush();
+
+    const startControl = tabs[startIndex]?.shadowRoot?.querySelector<HTMLButtonElement>(
+      'button[part="tab"]'
+    );
+    const targetControl = tabs[targetIndex]?.shadowRoot?.querySelector<HTMLButtonElement>(
+      'button[part="tab"]'
+    );
+    const onActivate = vi.fn();
+    targetControl?.addEventListener("click", onActivate);
+
+    startControl?.dispatchEvent(
+      new KeyboardEvent("keydown", { key, bubbles: true, composed: true, cancelable: true })
+    );
+    await flush();
+
+    expect(tabs[targetIndex]?.shadowRoot?.activeElement).toBe(targetControl);
+    expect(onActivate).toHaveBeenCalledTimes(1);
   });
 });

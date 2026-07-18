@@ -17,13 +17,13 @@ export const gaUiTokens = `
   --ga-surface-subtle: #efede7;
   --ga-surface-raised: #fffefa;
   --ga-surface-inverse: #171816;
-  --ga-surface-accent: #e84d3d;
-  --ga-surface-accent-hover: #d94133;
+  --ga-surface-accent: #cf392c;
+  --ga-surface-accent-hover: #b92f25;
   --ga-surface-celadon: #dfe9e1;
 
   --ga-text-primary: #171816;
   --ga-text-secondary: #5f625c;
-  --ga-text-tertiary: #7d8078;
+  --ga-text-tertiary: #74776f;
   --ga-text-inverse: #fffefa;
   --ga-text-accent: #b92f25;
 
