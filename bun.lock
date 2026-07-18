@@ -18,9 +18,26 @@
         "@ga-ut/ce": "workspace:*",
       },
     },
+    "apps/ui-showcase": {
+      "name": "@ga-ut/ui-showcase",
+      "dependencies": {
+        "@ga-ut/ce": "workspace:*",
+        "@ga-ut/ui": "workspace:*",
+      },
+    },
     "packages/ce": {
       "name": "@ga-ut/ce",
+      "version": "0.1.1",
+      "bin": {
+        "ce-cli": "dist/cli/index.mjs",
+      },
+    },
+    "packages/ui": {
+      "name": "@ga-ut/ui",
       "version": "0.1.0",
+      "dependencies": {
+        "@ga-ut/ce": "workspace:*",
+      },
     },
   },
   "packages": {
@@ -97,6 +114,10 @@
     "@ga-ut/ce": ["@ga-ut/ce@workspace:packages/ce"],
 
     "@ga-ut/ce-playground": ["@ga-ut/ce-playground@workspace:apps/playground"],
+
+    "@ga-ut/ui": ["@ga-ut/ui@workspace:packages/ui"],
+
+    "@ga-ut/ui-showcase": ["@ga-ut/ui-showcase@workspace:apps/ui-showcase"],
 
     "@jridgewell/gen-mapping": ["@jridgewell/gen-mapping@0.3.13", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.0", "@jridgewell/trace-mapping": "^0.3.24" } }, "sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA=="],
 

@@ -1,6 +1,10 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@ga-ut/ce/web": ["packages/ce/src/web/index.ts"]
+    },
     "types": ["vitest/globals"]
   },
   "include": ["test", "tests", "vitest.config.ts"]
